@@ -3,6 +3,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# C# Version
+
+C#/
+
+# Timid binary files
+*.timb
+
 # C extensions
 *.so
 

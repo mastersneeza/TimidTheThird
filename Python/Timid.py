@@ -1,4 +1,3 @@
-from operator import truth
 import sys
 
 from Compiler import *
@@ -10,7 +9,7 @@ from Runtime import *
 from Token import *
 from Value import *
 
-class Interpreter(Visitor):
+class Interpreter(Visitor): # TODO: organize REPL runtime
     def __init__(self):
         self.globals = Environment()
         self.environment = self.globals
@@ -51,7 +50,10 @@ class Interpreter(Visitor):
         self.execute_block(block.statements, Environment(self.environment))
 
     def visitPrintStmt(self, stmt: PrintStmt):
-        print(ToString(self.evaluate(stmt.value)))
+        result = ""
+        if stmt.value != None:
+            result = self.evaluate(stmt.value)
+        print(ToString(result))
 
     def visitExprStmt(self, stmt: ExprStmt): self.evaluate(stmt.expr)
 
@@ -83,15 +85,20 @@ class Interpreter(Visitor):
         return TimidAnon(expr, self.environment.copy())
 
     def visitInputExpr(self, expr: InputExpr):
-        prompt = self.evaluate(expr.prompt)
+        prompt = ""
+        if expr.prompt != None:
+            prompt = self.evaluate(expr.prompt)
+
         return input(prompt)
 
     def visitAssertStmt(self, stmt: AssertStmt):
         condition = self.evaluate(stmt.condition)
 
-        msg = self.evaluate(stmt.error_msg)
+        msg = "Assertion error"
+        if stmt.error_msg != None:
+            msg = self.evaluate(stmt.error_msg)
 
-        if not truth(condition):
+        if not (condition):
             raise RuntimeError(stmt.pos_start, stmt.pos_end, msg)
     
     def visitLiteralExpr(self, expr: LiteralExpr):
@@ -242,10 +249,6 @@ class Timid:
         else:
             for file in args:
                 Timid.run_file(file)
-        '''print(Lexer(input("> "), "<stdin>").lex())
-
-        if ErrorReporter.HAD_ERROR:
-            sys.exit(65)'''
 
     @staticmethod
     def run(source : str, path : str):
@@ -258,11 +261,8 @@ class Timid:
         if ErrorReporter.HAD_ERROR:
             return
 
-        c = Compiler_(statements)
+        c = Compiler(statements)
         c.compile("mai1.timb")
-
-        compiler = Compiler(statements)
-        b = compiler.compile()
 
         if ErrorReporter.HAD_ERROR:
             return
@@ -273,8 +273,10 @@ class Timid:
     def run_file(path):
         with open(path) as f:
             source = f.read()
-        if len(source) <= 0:
-            exit(64)
+
+        if len(source) <= 0: # If the file is empty then don't do anything
+            sys.exit(64)
+
         Timid.run(source, path)
 
     @staticmethod
@@ -283,8 +285,9 @@ class Timid:
             ErrorReporter.HAD_ERROR = False
 
             source = input("Timid > ")
-            if len(source) <= 0:
-                continue
+
+            if len(source) <= 0: continue
+
             Timid.run(source, "<stdin>")
 
 if __name__ == "__main__":

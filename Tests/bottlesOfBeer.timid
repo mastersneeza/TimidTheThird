@@ -1,0 +1,17 @@
+$howManyBottles = 99
+while howManyBottles != 0 {
+
+    print howManyBottles + " bottles of beer on the wall, "
+    print howManyBottles + " bottles of beer!"
+
+    howManyBottles = howManyBottles - 1
+
+    if howManyBottles <= 0 {
+        print "Go to the store, buy some more"
+        print "99 bottles of beer on the wall!"
+    } else {
+        print "Take one down, pass it around,"
+        print howManyBottles + " bottles of beer on the wall!"
+    }
+    print ""
+}

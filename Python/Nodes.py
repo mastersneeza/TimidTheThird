@@ -130,7 +130,7 @@ class AssertStmt(Stmt):
         self.condition = condition
         self.error_msg = error_msg
 
-        super().__init__(self.keyword.pos_start, self.error_msg.pos_end)
+        super().__init__(self.keyword.pos_start, self.condition.pos_end if error_msg == None else self.error_msg.pos_end)
 
     def accept(self, visitor): return visitor.visitAssertStmt(self)
 
@@ -173,9 +173,10 @@ class IfStmt(Stmt):
     def __repr__(self): return f"(if {self.condition} do {self.if_branch} else {self.else_branch})"
 
 class PrintStmt(Stmt):
-    def __init__(self, value : Expr):
+    def __init__(self, kw : Token, value : Expr):
+        self.kw = kw
         self.value = value
-        super().__init__(value.pos_start, value.pos_end)
+        super().__init__(kw.pos_start, kw.pos_end if value == None else value.pos_end)
 
     def accept(self, visitor): visitor.visitPrintStmt(self)
     def __repr__(self): return f"(print {self.value})"

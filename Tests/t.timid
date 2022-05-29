@@ -13,7 +13,8 @@ while howManyBottles != 0 {
     print "" ;
 }~
 
-$ num = in "Enter number: " ; ~ Get user to start with a full stop
+
+$ num = in "Enter number: " ;  ~Get user to start with a full stop
 $ c ;
 $ index = 0 ;
 $ result = 0 ;

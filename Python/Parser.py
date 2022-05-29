@@ -3,6 +3,7 @@ from Nodes import *
 from Token import Token
 
 MAX_ARG_COUNT = 255
+MAX_NEST_DEPTH = 40
 
 class ParseError(Exception): pass
 
@@ -10,13 +11,16 @@ class Parser:
     def __init__(self, tokens : list[Token]):
         self.tokens = tokens
         self.index = 0
+        self.nest_depth = 0
 
     @property
     def current_tok(self) -> Token: return self.tokens[self.index]
+
     @property
     def next_tok(self) -> Token:
         if self.is_at_end: return self.tokens[-1]
         return self.tokens[self.index + 1]
+
     @property
     def previous_tok(self) -> Token: return self.tokens[self.index - 1]
 
@@ -27,9 +31,12 @@ class Parser:
     def consume(self, message : str, *types : tuple[int]):
         for type in types:
             if self.check(type):
-                self.advance()
-                return self.previous_tok
+                return self.advance()
         raise self.error(self.current_tok, message)
+
+    def check_nonterminal(self, nont : Expr|Stmt|None, message : str):
+        if nont == None:
+            raise self.error(self.current_tok, message + f" (after '{self.previous_tok.lexeme}')")
 
     @property
     def is_at_end(self) -> bool: return self.current_tok.type == T_EOF
@@ -57,6 +64,7 @@ class Parser:
         return False
 
     def synchronize(self):
+        self.nest_depth = 0
         self.advance()
         while not self.is_at_end:
             if self.previous_tok.type in (T_SEMIC, ): return
@@ -73,7 +81,8 @@ class Parser:
             statements = []
             while not self.is_at_end:
                 stmt = self.declaration()
-                if stmt == None:
+
+                if stmt == None: # If there are trailing newlines then return the statements
                     break
                 statements.append(stmt)
 
@@ -84,144 +93,193 @@ class Parser:
         except ParseError:
             return None
 
-    def declaration(self):
+    def declaration(self, nullable = False):
         try:
+            while self.match(T_SEMIC): pass # Ignore random semicolons or newlines
+            if self.is_at_end: # If end of file or end of block, ignore
+                return None
             if self.match(T_DOLLAR):
-                return self.var_decl()
-            return self.statement()
+                return self.var_decl(nullable)
+            return self.statement(nullable)
         except ParseError:
             self.synchronize()
 
-    def var_decl(self):
+    def var_decl(self, nullable = False):
         name : Token = self.consume("Expected an identifier (after '$')", T_IDENTIFIER)
         initializer : Expr = None
         if self.match(T_EQ):
-            initializer = self.expr()
-        
-        e = VarDeclStmt(name, initializer)
-        return e
+            initializer = self.expr(True)
 
-    def statement(self):
+            self.check_nonterminal(initializer, "Expected a variable initializer")
+        
+        return VarDeclStmt(name, initializer)
+
+    def statement(self, nullable = False):
         while self.match(T_SEMIC): pass # Ignore random semicolons or newlines
         if self.is_at_end or self.check(T_RCURL): # If end of file or end of block, ignore
             return None
-        if self.match(T_WHILE): return self.while_stmt()
-        if self.match(T_FOR): return self.for_stmt()
-        if self.match(T_IF): return self.if_stmt()
-        if self.match(T_PRINT): return self.print_stmt()
-        if self.match(T_LCURL): return self.block()
+        if self.match(T_WHILE): return self.while_stmt(nullable)
+        if self.match(T_FOR): return self.for_stmt(nullable)
+        if self.match(T_IF): return self.if_stmt(nullable)
+        if self.match(T_PRINT): return self.print_stmt(nullable)
+        if self.match(T_LCURL): return self.block(nullable)
         if self.match(T_ASSERT):
             kw = self.previous_tok
-            condition = self.expr()
-            message = self.expr()
+            condition = self.expr(nullable)
+            message = self.expr(True)
             
             return AssertStmt(kw, condition, message)
-        return self.expr_stmt()
+        return self.expr_stmt(nullable)
 
-    def for_stmt(self):
+    def for_stmt(self, nullable = False):
         return ForStmt()
 
-    def while_stmt(self):
-        condition = self.expr()
-        body = self.statement()
+    def while_stmt(self, nullable = False):
+        self.nest_depth += 1
+        if self.nest_depth >= MAX_NEST_DEPTH:
+            raise self.error(self.current_tok, "Maximum block nesting depth reached")
+        condition = self.expr(True)
+
+        if condition == None:
+            raise self.error(self.current_tok, f"Expected a 'while' loop condition (after '{self.previous_tok.lexeme}' token)")
+
+        body = self.statement(True)
+
+        if body == None:
+            raise self.error(self.current_tok, f"Expected a 'while' loop body (after '{self.previous_tok.lexeme}')")
+        self.nest_depth -= 1
         return WhileStmt(condition, body)
 
-    def block(self):
+    def block(self, nullable = False):
         lcurl = self.previous_tok
+        self.nest_depth += 1
+        if self.nest_depth >= MAX_NEST_DEPTH:
+            raise self.error(lcurl, "Maximum block nesting depth reached")
+
         statements = []
         while not self.check(T_RCURL) and not self.is_at_end:
-            stmt = self.declaration()
+            stmt = self.declaration(True)
             if stmt == None:
                 break
             statements.append(stmt)
         rcurl = self.consume("Expected a closing '}' (after '{' or previous statement)", T_RCURL)
+        self.nest_depth -= 1
         return Block(lcurl, statements, rcurl)
 
-    def if_stmt(self):
-        condition = self.expr()
+    def if_stmt(self, nullable = False):
+        self.nest_depth += 1
+        if self.nest_depth >= MAX_NEST_DEPTH:
+            raise self.error(self.current_tok, "Maximum block nesting depth reached")
+        condition = self.expr(True)
 
-        if_branch = self.statement()
+        if condition == None:
+            raise self.error(self.current_tok, f"Expected an 'if' statement condition (after '{self.previous_tok.lexeme}')")
+
+        if_branch = self.statement(True)
+
+        if if_branch == None:
+            raise self.error(self.current_tok, f"Expected an 'if' statement body (after '{self.previous_tok.lexeme}')")
+
         else_branch = None
 
         if self.match(T_ELSE):
-            else_branch = self.statement()
-        
+            else_branch = self.statement(True)
+
+            if else_branch == None:
+                raise self.error(self.current_tok, f"Expected an 'else' clause body (after '{self.previous_tok.lexeme}')")
+
+        self.nest_depth -= 1
         return IfStmt(condition, if_branch, else_branch)
 
-    def print_stmt(self):
-        value = self.expr()
-        return PrintStmt(value)
+    def print_stmt(self, nullable = False):
+        kw = self.previous_tok
+        value = self.expr(True) # There can be nothing to print
+        return PrintStmt(kw, value)
     
-    def expr_stmt(self):
-        value = self.expr()
+    def expr_stmt(self, nullable = False):
+        value = self.expr(nullable)
         return ExprStmt(value)
 
     # Expressions
 
-    def expr(self):
-        return self.ternary()
+    def expr(self, nullable = False):
+        return self.ternary(nullable)
     
-    def ternary(self):
-        condition = self.assignment()
+    def ternary(self, nullable = False):
+        condition = self.assignment(nullable)
 
         if self.match(T_QMARK):
-            if_branch = self.expr()
+            if_branch = self.expr(True)
 
-            self.consume("Expected a ':' (after if branch)", T_COLON)
+            if if_branch == None:
+                raise self.error(self.current_tok, f"Expected a ternary operator False branch (after '{self.previous_tok.lexeme}')")
 
-            else_branch = self.expr()
+            self.consume(f"Expected a ':' in ternary operator (after '{self.previous_tok.lexeme}')", T_COLON)
+
+            else_branch = self.expr(True)
+
+            if else_branch == None:
+                raise self.error(self.current_tok, f"Expected a ternary operator True branch (after '{self.previous_tok.lexeme}')")
 
             return TernaryExpr(condition, if_branch, else_branch)
-
         return condition
 
-    def assignment(self):
-        expr = self.lambda_expr()
-        if (self.match(T_EQ)):
-            value = self.assignment()
+    def assignment(self, nullable = False):
+        expr = self.lambda_expr(nullable)
+        if self.match(T_EQ):
+            invalid = False
+            value = self.assignment(True)
 
-            if (isinstance(expr, VariableExpr)):
+            if (not isinstance(expr, VariableExpr)):
+                self.error(expr, "Invalid assignment target")
+                invalid = True
+
+            if value == None:
+                raise self.error(self.current_tok, f"Expected an assignment value (after '{self.previous_tok.lexeme}')")
+
+            if not invalid:
                 return AssignExpr(expr.name, value)
 
-            self.error(expr, "Invalid assignment target")
         return expr
-    def lambda_expr(self):
+
+    def lambda_expr(self, nullable = False):
         if self.match(T_LAMBDA):
             keyword : Token = self.previous_tok
             identifier : Token = self.consume("Expected an identifier (after 'lam' keyword)", T_IDENTIFIER)
             if self.is_at_end:
                 raise self.error(self.current_tok, f"Expected a lambda expression body (after identifier '{self.previous_tok.lexeme}')")
-            body = self.expr()
+            body = self.expr(nullable)
             return LambdaExpr(keyword, identifier, body)
-        return self.or_expr()
+        return self.or_expr(nullable)
 
-    def or_expr(self): return self.bin_op(self.and_expr, (T_OR, ))
-    def and_expr(self): return self.bin_op(self.equality, (T_AND, ))
-    def equality(self): return self.bin_op(self.comparison, (T_EE, T_NE))
-    def comparison(self): return self.bin_op(self.sum, (T_LT, T_LTE, T_GT, T_GTE))
-    def sum(self): return self.bin_op(self.term, (T_PLUS, T_MINUS))
-    def term(self): return self.bin_op(self.unary, (T_STAR, T_SLASH, T_PERCENT))
+    def or_expr(self, nullable = False):     return self.bin_op(self.and_expr, (T_OR, ), nullable = nullable)
+    def and_expr(self, nullable = False):    return self.bin_op(self.equality, (T_AND, ), nullable = nullable)
+    def equality(self, nullable = False):    return self.bin_op(self.comparison, (T_EE, T_NE), nullable = nullable)
+    def comparison(self, nullable = False):  return self.bin_op(self.sum, (T_LT, T_LTE, T_GT, T_GTE), nullable = nullable)
+    def sum(self, nullable = False):         return self.bin_op(self.term, (T_PLUS, T_MINUS), nullable = nullable)
+    def term(self, nullable = False):        return self.bin_op(self.unary, (T_STAR, T_SLASH, T_PERCENT), nullable = nullable)
 
-    def unary(self):
+    def unary(self, nullable = False):
         if self.match(T_PLUS, T_MINUS, T_NOT):
             operator : Token = self.previous_tok
-            if self.is_at_end:
+            right : UnaryExpr = self.unary(True)
+
+            if right == None:
                 raise self.error(self.current_tok, f"Expected a unary operand (after unary operator '{self.previous_tok.lexeme}')")
-            right : UnaryExpr = self.unary()
             return UnaryExpr(operator, right)
-        return self.power()
+        return self.power(nullable)
 
-    def power(self): return self.bin_op(self.factorial, (T_CARET, ), self.unary)
+    def power(self, nullable = False): return self.bin_op(self.factorial, (T_CARET, ), self.unary, nullable)
 
-    def factorial(self):
-        expr = self.call()
+    def factorial(self, nullable = False):
+        expr = self.call(nullable)
 
-        if self.match(T_NOT):
+        while self.match(T_NOT): # There can be as many !s after the expression
             expr = FactorialExpr(expr)
         return expr
 
-    def call(self):
-        expr = self.atom()
+    def call(self, nullable = False):
+        expr = self.atom(nullable)
 
         while True:
             if self.match(T_LPAR):
@@ -233,45 +291,60 @@ class Parser:
 
         return expr
 
-    def atom(self):
+    def atom(self, nullable = False):
         if self.match(T_IN):
             kw = self.previous_tok
-            try:
-                prompt = self.expr()
-            except ParseError:
-                prompt = None
+            prompt = self.expr(True) # There may not be a prompt
             return InputExpr(prompt, kw)
         if self.match(T_INT, T_FLOAT, T_STRING, T_TRUE, T_FALSE, T_NULL): return LiteralExpr(self.previous_tok)
         if self.match(T_IDENTIFIER): return VariableExpr(self.previous_tok)
         if self.match(T_LPAR):
+            self.nest_depth += 1
+            if self.nest_depth >= MAX_NEST_DEPTH:
+                raise self.error(self.current_tok, "Maximum parentheses nesting depth reached")
             lpar = self.previous_tok
             expr : Expr = self.expr() # Can be an expression or a dictionary key
             if self.match(T_COLON): # Dictionary literal
                 keys = [expr]
                 values = []
 
-                values.append(self.expr())
+                value = self.expr(True)
 
-                if self.match(T_COMMA):
+                if value == None:
+                    raise self.error(self.current_tok, f"Expected an initial dictionary value (after '{self.previous_tok.lexeme}')")
+                values.append(value) # There must be a value
 
+                if self.match(T_COMMA): # If there is comma we might have more entries
                     while True:
-                        keys.append(self.expr())
-                        self.consume("Expected a ':' after dictionary key", T_COLON)
-                        values.append(self.expr())
-
-                        if self.check(T_COMMA) and self.next_tok.type == T_RPAR:
-                            self.advance()
+                        key = self.expr(True)
+                        if key == None:
                             break
+                        keys.append(key)
 
-                        if not self.match(T_COMMA):
+                        self.consume("Expected a ':' after dictionary key", T_COLON)
+
+                        value = self.expr(True)
+
+                        if value == None:
+                            raise self.error(self.current_tok, f"Expected a dictionary value (after '{self.previous_tok.lexeme}')")
+                        values.append(value)
+
+                        if self.check(T_COMMA) and self.next_tok.type == T_RPAR: # Traling commas are allowed
+                            self.advance() # Consume the trailing comma, and let the ')' be consumed by the consume function
                             break
                     
-                rpar = self.consume(f"Expected a ')' (after '{self.previous_tok.lexeme}')", T_RPAR) # Grouping
+                rpar = self.consume(f"Expected a closing ')' for dictionary (after '{self.previous_tok.lexeme}')", T_RPAR) # Grouping
+                self.nest_depth -= 1
                 return DictionaryExpr(lpar, rpar, keys, values)
             else:
-                self.consume(f"Expected a ')' (after '{self.previous_tok.lexeme}')", T_RPAR) # Grouping
+                self.consume(f"Expected a closing ')' for grouping (after '{self.previous_tok.lexeme}')", T_RPAR) # Grouping
+                self.nest_depth -= 1
             return expr
-        raise self.error(self.current_tok, "Expected an expression")
+
+        if not nullable:
+            raise self.error(self.current_tok, "Expected an expression") # Default error message
+        
+        return None
 
     def finish_subscript(self, atom : Expr):
         subscript = self.expr()
@@ -299,15 +372,17 @@ class Parser:
         r_par = self.consume("Expected a closing ')' after function call", T_RPAR)
         return CallExpr(callee, r_par, arguments)
 
-    def bin_op(self, left_rule : type, operators : tuple[int], right_rule : type = None) -> BinaryExpr | Expr:
+    def bin_op(self, left_rule : type, operators : tuple[int], right_rule : type = None, nullable = False) -> BinaryExpr | Expr:
         if right_rule == None: right_rule = left_rule
-        left : Expr = left_rule()
+        left : Expr = left_rule(nullable)
 
         while self.matcht(operators):
             operator : Token = self.previous_tok
-            if self.is_at_end:
+            right : Expr = right_rule(True)
+
+            if right == None:
                 raise self.error(self.current_tok, f"Expected a right binary operand (after '{operator.lexeme}')")
-            right : Expr = right_rule()
+
             left = BinaryExpr(left, operator, right)
 
         return left
