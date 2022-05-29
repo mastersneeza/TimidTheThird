@@ -1,0 +1,292 @@
+from operator import truth
+import sys
+
+from Compiler import *
+from Error import ErrorReporter
+from Lexer import Lexer
+from Nodes import *
+from Parser import *
+from Runtime import *
+from Token import *
+from Value import *
+
+class Interpreter(Visitor):
+    def __init__(self):
+        self.globals = Environment()
+        self.environment = self.globals
+
+        self.globals.define("Clock", Clock())
+
+    def interpret(self, statements : list[Stmt]):
+        try:
+            for stmt in statements:
+                self.execute(stmt)
+        except (RuntimeError, TypeError) as e:
+            ErrorReporter.runtime_error(e)
+
+    def evaluate(self, expr : Expr, environment : Environment = None):
+        previous = self.environment
+        if environment != None:
+            try:
+                self.environment = environment
+                result = expr.accept(self)
+            finally:
+                self.environment = previous
+        else:
+            result = expr.accept(self)
+        return result
+
+    def execute(self, stmt : Stmt): stmt.accept(self)
+
+    def execute_block(self, statements : list[Stmt], environment : Environment):
+        previous = self.environment
+        try:
+            self.environment = environment
+            for stmt in statements:
+                self.execute(stmt)
+        finally:
+            self.environment = previous
+
+    def visitBlock(self, block: Block):
+        self.execute_block(block.statements, Environment(self.environment))
+
+    def visitPrintStmt(self, stmt: PrintStmt):
+        print(ToString(self.evaluate(stmt.value)))
+
+    def visitExprStmt(self, stmt: ExprStmt): self.evaluate(stmt.expr)
+
+    def visitWhileStmt(self, stmt: WhileStmt):
+        while self.evaluate(stmt.condition):
+            self.execute(stmt.body)
+
+    def visitIfStmt(self, stmt: IfStmt):
+        condition = self.evaluate(stmt.condition)
+
+        if condition:
+            self.execute(stmt.if_branch)
+            return
+        if stmt.else_branch != None:
+            self.execute(stmt.else_branch)
+        
+    def visitVarDeclStmt(self, stmt: VarDeclStmt):
+        value = None
+        if (stmt.initializer != None):
+            value = self.evaluate(stmt.initializer)
+        self.environment.define(stmt.name.lexeme, value)
+
+    def visitAssignExpr(self, expr: AssignExpr):
+        value = self.evaluate(expr.value)
+        self.environment.assign(expr.name, value)
+        return value
+
+    def visitLambdaExpr(self, expr: LambdaExpr):
+        return TimidAnon(expr, self.environment.copy())
+
+    def visitInputExpr(self, expr: InputExpr):
+        prompt = self.evaluate(expr.prompt)
+        return input(prompt)
+
+    def visitAssertStmt(self, stmt: AssertStmt):
+        condition = self.evaluate(stmt.condition)
+
+        msg = self.evaluate(stmt.error_msg)
+
+        if not truth(condition):
+            raise RuntimeError(stmt.pos_start, stmt.pos_end, msg)
+    
+    def visitLiteralExpr(self, expr: LiteralExpr):
+        type_ = expr.token.type
+        if type_ in (T_INT, T_FLOAT):
+            return expr.token.value
+        elif type_ in (T_TRUE, T_FALSE):
+            return expr.token.type == T_TRUE
+        elif type_ == T_NULL:
+            return None
+        elif type_ == T_STRING:
+            return expr.token.lexeme
+
+    def visitBinaryExpr(self, expr: BinaryExpr):
+        left = self.evaluate(expr.left)
+        right = self.evaluate(expr.right)
+
+        if IsNumeric(left):
+            left = ToNumber(left)
+        if IsNumeric(right):
+            right = ToNumber(right)
+        
+        operator = expr.operator.type
+
+        if operator == T_PLUS:
+            if isinstance(left, str) or isinstance(right, str):
+                left = ToString(left)
+                right = ToString(right)
+
+            return left + right
+        elif operator == T_MINUS:
+            return left - right
+        elif operator == T_STAR:
+            return left * right
+        elif operator == T_SLASH:
+            if right == 0:
+                raise RuntimeError(expr.right.pos_start, expr.right.pos_end, "Division by zero")
+            return left / right
+        elif operator == T_PERCENT:
+            if right == 0:
+                raise RuntimeError(expr.right.pos_start, expr.right.pos_end, "Modulus by zero")
+            return left % right
+        elif operator == T_CARET:
+            return left ** right
+        elif operator == T_EE:
+            return IsEqual(left, right)
+        elif operator == T_NE:
+            return not IsEqual(left, right)
+        elif operator == T_LT:
+            return left < right
+        elif operator == T_LTE:
+            return left <= right
+        elif operator == T_GT:
+            return left > right
+        elif operator == T_GTE:
+            return left >= right
+        elif operator == T_AND:
+            return left and right
+        elif operator == T_OR:
+            return left or right
+
+    def visitDictionaryExpr(self, expr: DictionaryExpr):
+        keys = [self.evaluate(key) for key in expr.keys]
+        values = [self.evaluate(value) for value in expr.values]
+        d = dict()
+
+        for key in keys:
+            d[key] = values[keys.index(key)]
+
+        return d
+
+    def visitFactorialExpr(self, expr: FactorialExpr):
+        left = self.evaluate(expr.expr)
+        if not IsNumeric(left):
+            raise RuntimeError(expr.expr.pos_start, expr.expr.pos_end, "Expected integer to factorialize")
+
+        if ToInt(left) < 0:
+            raise RuntimeError(expr.expr.pos_start, expr.expr.pos_end, "Cannot factorialize negative number")
+
+        result = 1
+        for i in range(1, ToInt(left) + 1):
+            result *= i
+        return result        
+
+    def visitUnaryExpr(self, expr: UnaryExpr):
+        right = self.evaluate(expr.right)
+
+        operator = expr.operator.type
+
+        if operator == T_MINUS:
+            return -right
+        elif operator == T_NOT:
+            return not right
+        elif operator == T_PLUS:
+            return right
+
+    def visitCallExpr(self, expr: CallExpr):
+        callee = self.evaluate(expr.callee)
+
+        args = []
+
+        for arg in expr.args:
+            args.append(self.evaluate(arg))
+
+        if not isinstance(callee, TimidCallable):
+            raise RuntimeError(expr.pos_start, expr.pos_end, f"Object of type {type(callee)} is not callable. (Functions and classes are)")
+
+        function : TimidCallable = callee
+
+        if len(args) != function.arity:
+            raise RuntimeError(expr.paren.pos_start, expr.pos_end, f"Expected {function.arity} arguments but received {len(args)}")
+
+        return function.call(self, args)
+
+    def visitSubscriptExpr(self, expr: SubscriptExpr):
+        iterable = self.evaluate(expr.iterable)
+
+        if not isinstance(iterable, str):
+            raise RuntimeError(expr.iterable.pos_start, expr.iterable.pos_end, "Expected an iterable type to subscript")
+
+        index = self.evaluate(expr.subscript)
+
+        if not isinstance(index, int):
+            raise RuntimeError(expr.subscript.pos_start, expr.subscript.pos_end, "Expected an integral type as an index")
+
+        if index >= len(iterable):
+            raise RuntimeError(expr.subscript.pos_start, expr.subscript.pos_end, "Index is out of bounds")
+
+        return iterable[index]
+
+    def visitVariableExpr(self, expr: VariableExpr):
+        return self.environment.get(expr.name)
+
+    def visitTernaryExpr(self, expr: TernaryExpr):
+        condition = self.evaluate(expr.condition)
+        
+        if condition:
+            return self.evaluate(expr.if_branch)
+        return self.evaluate(expr.else_branch)
+
+class Timid:
+    INTERPRETER = Interpreter()
+    @staticmethod
+    def init():
+        args = sys.argv[1:]
+        if len(args) < 1:
+            Timid.run_repl()
+        else:
+            for file in args:
+                Timid.run_file(file)
+        '''print(Lexer(input("> "), "<stdin>").lex())
+
+        if ErrorReporter.HAD_ERROR:
+            sys.exit(65)'''
+
+    @staticmethod
+    def run(source : str, path : str):
+        lexer = Lexer(source, path)
+        tokens = lexer.lex()
+
+        parser = Parser(tokens)
+        statements = parser.parse()
+
+        if ErrorReporter.HAD_ERROR:
+            return
+
+        c = Compiler_(statements)
+        c.compile("mai1.timb")
+
+        compiler = Compiler(statements)
+        b = compiler.compile()
+
+        if ErrorReporter.HAD_ERROR:
+            return
+
+        Timid.INTERPRETER.interpret(statements)
+
+    @staticmethod
+    def run_file(path):
+        with open(path) as f:
+            source = f.read()
+        if len(source) <= 0:
+            exit(64)
+        Timid.run(source, path)
+
+    @staticmethod
+    def run_repl():
+        while True:
+            ErrorReporter.HAD_ERROR = False
+
+            source = input("Timid > ")
+            if len(source) <= 0:
+                continue
+            Timid.run(source, "<stdin>")
+
+if __name__ == "__main__":
+    Timid.init()
+    

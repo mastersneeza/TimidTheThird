@@ -1,0 +1,79 @@
+~ This file is for testing the parsing of newlines and semicolons, because statement terminators are newlines
+~ Semicolons can also be used in place of newlines for the REPL
+
+~ Random newlines
+
+
+
+print "Hello, world!"
+
+
+print "Optional semicolons (semicoli???)";;;;
+;
+;
+;
+;
+;
+;
+print "Inline print 1";;;;;;print "Inline print 2"
+
+
+
+
+~ Single line comment
+
+
+~~ Multi
+line
+
+comment ~
+
+
+print "After comment"
+
+
+{
+    
+
+
+    print "Block print"
+    ;;;
+
+    ;
+
+
+    ;;
+
+    print "Block after many semic or newline";;
+
+    ~~ 
+    
+    many
+
+    random
+
+    comments in Block
+
+
+    4
+    y34
+    hg
+    esfr4gh5e4
+    ~
+
+    print "Good, comments and newlines and semicolons work";;
+    ;
+    ;
+    ;
+    ;
+    ;   ;;  ;   ;   ;       ;       
+
+
+    ;;
+    ;
+
+
+}
+
+
+print "End of program";

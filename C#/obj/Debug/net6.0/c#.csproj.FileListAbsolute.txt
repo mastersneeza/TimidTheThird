@@ -1,0 +1,15 @@
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\bin\Debug\net6.0\c#.exe
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\bin\Debug\net6.0\c#.deps.json
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\bin\Debug\net6.0\c#.runtimeconfig.json
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\bin\Debug\net6.0\c#.dll
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\bin\Debug\net6.0\c#.pdb
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.csproj.AssemblyReference.cache
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.AssemblyInfoInputs.cache
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.AssemblyInfo.cs
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.csproj.CoreCompileInputs.cache
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.dll
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\refint\c#.dll
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.pdb
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\c#.genruntimeconfig.cache
+C:\Users\drill\OneDrive - education.wa.edu.au\Documents\Timid\Timid\c#\obj\Debug\net6.0\ref\c#.dll
