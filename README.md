@@ -12,8 +12,12 @@ Why does it exist? I dunno.
 Do I want it to exist? Maybe.
 Can it become useful? Possibly.
 
+I NEED AN ICON OR LOGO HELP (see Development)
+
 ## What's new (no one asked)
 
+- Added ```for``` loops
+- Reworked string encoding in ```.timb``` files
 - Removal of semicolon delimitter - Now you do not need to terminate statements with semicolons
 
 ## Features
@@ -22,24 +26,26 @@ Can it become useful? Possibly.
 - P R I N T I N G
 - User input
 - Simple types (int, float, bool, string, null)
-- Control flow (why wouldn't it have it?)
-- Assertions
-- That's it
+- Block syntax (```{}``` to surround statements)
+- Control flow (```if```, ```while```, ```for```) (I might add a ```forever``` block)
+- Assertions (```|- condition error_msg```)
+- That's it (what???)
 
 ## Coming soon (or maybe never)
 
+- Better command line interface (options, flags, lists of files to run, where to save the ```.timb``` file, etc)
 - Functions and lambdas (once I figure out how to represent them in bytecode)
 - Classes and other OOP (going to be copypasted from Crafting Interpreters)
 - Better error handling and static analysis
 - String functions
 - Collections (array, tuple, dictionary, stack)\
-- More IO stuffs
+- More IO stuffs (file reading, idk)
 - Imports and exports
-- Typing and type annotations
+- Typing and type annotations (maybe add ```const``` keyword too)
 - Coroutines
 - Networking
-- Graphics library
-- Unicode strings
+- Graphics library (what to use???)
+- UTF-8 encoded strings
 
 Quotes from the creator (me):
 > sex
@@ -63,6 +69,10 @@ git clone https://github.com/mastersneeza/TimidTheThird
 ## Running
 
 ### Run the REPL
+
+### Note
+
+In order to run, you must have Python 3.10 or higher installed on your path
 
 ```python
 py TimidTheThird/Python/Timid.py
@@ -90,4 +100,5 @@ gcc TimidTheThird/C/*.c -o Timid
 
 ## Development
 
+Timid wants logo. Timid wants power.
 Help.
