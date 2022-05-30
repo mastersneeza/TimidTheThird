@@ -1,0 +1,9 @@
+~ Simple truth machine program
+
+$input = in "Enter 1 or 0 "
+
+if input == '1'
+    print 1
+else
+    while tru
+        print 0

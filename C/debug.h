@@ -4,13 +4,13 @@
 #define T_DB
 
 #ifdef T_DBG
-#define T_MEM_DBG
-#define T_VM_DBG
-#define T_STACK_DBG
-#define T_TABLE_DBG
-#define T_VAL_DBG
-#define T_BLOCK_DBG
-#define T_OBJ_DBG
+#define T_MEM_DB
+#define T_VM_DB
+#define T_STACK_DB
+#define T_TABLE_DB
+#define T_VAL_DB
+#define T_BLOCK_DB
+#define T_OBJ_DB
 #endif
 
 #include <stdarg.h>

@@ -157,8 +157,8 @@ ObjString* tableFindString(Table* table, const char* chars, int length, uint32_t
         } else { 
             bool stringsEqualLength = entry->key->length == length;
             bool hashesEqual = entry->key->hash == hash;
-            bool bytesEqual = memcmp(entry->key->chars, chars, length) == 0;
-            if (stringsEqualLength && hashesEqual && bytesEqual) {
+            //bool bytesEqual = memcmp(entry->key->chars, chars, length) == 0;
+            if (stringsEqualLength && hashesEqual && memcmp(entry->key->chars, chars, length) == 0) {
                 // String is found
                 return entry->key;
             }

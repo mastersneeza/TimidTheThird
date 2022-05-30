@@ -105,7 +105,7 @@ static void readBytecode(uint8_t* bytecode, size_t bytecodeLength) {
     // Read constant pool
     for (; offset < bytecodeLength && !readConstants;) {
         BytecodeValType constantType = READ_BYTE(); // Our counter is one byte ahead of where we are
-        switch (constantType) {
+        switch (constantType) { // Add values to constant pool
             case B_INT: {
                 union {
                     uint8_t bytes[T_INT_SIZE];
@@ -133,24 +133,27 @@ static void readBytecode(uint8_t* bytecode, size_t bytecodeLength) {
                 break;
             }
             case B_STRING: {
-                /* READ THE LENGTH OF THE STRING */
-                    union {
-                        uint8_t bytes[sizeof(uint32_t)];
-                        uint32_t i; // Unsigned long long
-                } u;
+                int len = 0;
 
-                for (int intOffset = 0; intOffset < sizeof(uint32_t); intOffset++) {
-                    u.bytes[intOffset] = READ_BYTE();
+                // Read string length
+                while (READ_BYTE() != '\0') {
+                    len++;
                 }
 
-                uint32_t strLen = u.i;
-                char* buffer = malloc(strLen);
+                // Rewind to the start
+                for (int i = 0; i < len + 1; i++) {
+                    offset--;
+                }
+                
+                char* buffer = ALLOCATE(char, len);
 
-                /* READ CHARS */
-                for (int i = 0; i < strLen; i++) {
+                // Set chars
+                for (int i = 0; i < len; i++) {
                     buffer[i] = READ_BYTE();
                 }
-                addConstant(vm.block, TIMID_STRING(buffer, strLen));
+
+                READ_BYTE(); // Consume null terminator
+                addConstant(vm.block, TIMID_STRING(buffer, len));
                 break;
             }
             default:
@@ -165,132 +168,31 @@ static void readBytecode(uint8_t* bytecode, size_t bytecodeLength) {
         }
     }
 
-    /*if ((bytecode[0] << 8) | bytecode[1] << 8 != HEADER_BYTES) { // Consume header bytes
-        printf("Invalid file format\n");
-        return;
-    }*/
     for (offset += 1; offset < bytecodeLength;) { // Loop through every byte, after checking the header
         uint8_t instruction = READ_BYTE(); // We can move our offset pointer further ahead based on certain instructions
-        emitByte(instruction);
-        #ifdef NO
-        switch (instruction) { // The instructions match with the python instructions emitted by the compiler
-            case OP_CONSTANT:
-            case OP_CONSTANT_LONG: {
-                uint8_t type = READ_BYTE(); // The Python compiler will emit another byte determining how to interpret the following bytes
-                if (type == 0x69) { // Float
-                    union {
-                        uint8_t bytes[T_FLOAT_SIZE];
-                        t_float f;
-                    } u;
-
-                    for (int floatOffset = 0; floatOffset < T_FLOAT_SIZE; floatOffset++) {
-                        u.bytes[floatOffset] = READ_BYTE();
-                    }
-                    writeConstant(vm.block, TIMID_FLOAT(u.f));
-                    //push(TIMID_FLOAT(u.f));
-                } else if (type == 0x99) { // Int
-                    union {
-                        uint8_t bytes[T_INT_SIZE];
-                        t_int i;
-                    } u;
-
-                    for (int intOffset = 0; intOffset < T_INT_SIZE; intOffset++) {
-                        u.bytes[intOffset] = READ_BYTE();
-                    }
-                    writeConstant(vm.block, TIMID_INT(u.i));
-                    //push(TIMID_INT(u.i));
-                } else if (type == 0xcc) { // String
-                    /* READ THE LENGTH OF THE STRING */
-                    union {
-                        uint8_t bytes[sizeof(uint32_t)];
-                        uint32_t i; // Unsigned long long
-                    } u;
-
-                    for (int intOffset = 0; intOffset < sizeof(uint32_t); intOffset++) {
-                        u.bytes[intOffset] = READ_BYTE();
-                    }
-
-                    uint32_t strLen = u.i;
-                    char* buffer = malloc(strLen);
-                    for (int i = 0; i < strLen; i++) {
-                        buffer[i] = READ_BYTE();
-                    }
-                    writeConstant(vm.block, TIMID_STRING(buffer, strLen));
-                    //push(TIMID_STRING(buffer, strLen));
-                }
-                break;
-            }
+        switch (instruction) {
+            case OP_GET_LOCAL:
+            case OP_SET_LOCAL:
             case OP_DEFINE_GLOBAL:
-            case OP_GET_GLOBAL: 
-            case OP_SET_GLOBAL: { // For reading variable names to send to the vm
-                //printf("GLOBAL %x \n", instruction);
+            case OP_GET_GLOBAL:
+            case OP_SET_GLOBAL: {
                 emitByte(instruction);
+                uint8_t constType = READ_BYTE();
+                emitByte(constType);
 
-                // Check the string header
-                if (READ_BYTE() != 0xcc) {
-                    fprintf(stderr, "Invalid string header\n");
-                    break;
-                }
-
-                /* READ THE LENGTH OF THE STRING */
-                union {
-                    uint8_t bytes[sizeof(uint32_t)];
-                    uint32_t i; // Unsigned integer
-                } u;
-
-                for (int intOffset = 0; intOffset < sizeof(uint32_t); intOffset++) {
-                    u.bytes[intOffset] = READ_BYTE();
-                }
-
-                // Read the characters into the buffer
-                uint32_t strLen = u.i;
-                
-                char* buffer = malloc(strLen);
-                for (int i = 0; i < strLen; i++) {
-                    buffer[i] = READ_BYTE();
-                }
-                //printf("Make identifier %*.s\n", strLen, buffer);
-
-                // Add the identifier name to the constant pool without pushing onto the stack
-                int index = addConstant(vm.block, TIMID_STRING(buffer, strLen));
-                //printf("Add string to constants\n");
-
-                uint8_t constantType = READ_BYTE(); // The next byte will say how to read the constant pool index
-                //int constantIndex;
-                //printf("Got constant type %x \n", constantType);
-
-                emitByte(constantType);
-
-                if (constantType == OP_CONSTANT) {
-                    //constantIndex = (int)READ_BYTE();
+                if (constType == OP_CONSTANT) {
                     emitByte(READ_BYTE());
-
-                } else if (constantType == OP_CONSTANT_LONG) {
-                    //constantIndex = (int) (READ_BYTE() | (READ_BYTE() << 8) | (READ_BYTE() << 16));
+                } else if (constType == OP_CONSTANT_LONG) {
                     emitByte(READ_BYTE());
                     emitByte(READ_BYTE());
                     emitByte(READ_BYTE());
                 }
-
-                //vaPrint(&vm.block->constants);
-                //writeConstant(vm.block, TIMID_INT(constantIndex));
-
-                /*uint8_t constantType = READ_BYTE(); // The next byte determines how to load the operand 
-                int operand;
-
-                if (constantType == OP_CONSTANT) { // Convert the string index into an integer
-                    operand = (int)READ_BYTE();
-                } else if (constantType == OP_CONSTANT_LONG) {
-                    operand = (int) (READ_BYTE() | (READ_BYTE() << 8) | (READ_BYTE() << 16));
-                }
-                writeConstant(vm.block, TIMID_INT(operand));
-                emitByte(instruction);*/
                 break;
             }
-            default: emitByte(instruction); break;
-                // Otherwise we can safely emit the corresponding instruction
+            default:
+                emitByte(instruction);
+                break;
         }
-        #endif
     }
     #undef READ_BYTE
     #undef PEEK
@@ -330,29 +232,26 @@ static InterpretResult run() {
             case OP_CONSTANT: {
                 Value value = READ_CONSTANT();
                 push(value);
-                logInstruction("vm.c :: run : Push constant\n");
                 break;
             }
             case OP_CONSTANT_LONG: {
                 Value value = READ_CONSTANT_LONG();
                 push(value);
-                logInstruction("vm.c :: run : Push long constant\n");
                 break;
             }
-            case OP_NEG1: push(TIMID_INT(-1)); logInstruction("vm.c :: run : Push -1\n"); break;
-            case OP_0: push(TIMID_INT(0)); logInstruction("vm.c :: run : Push 0\n"); break;
-            case OP_1: push(TIMID_INT(1)); logInstruction("vm.c :: run : Push 1\n"); break;
-            case OP_2: push(TIMID_INT(2)); logInstruction("vm.c :: run : Push 2\n"); break;
-            case OP_TRUE: push(TIMID_BOOL(true)); logInstruction("vm.c :: run : Push tru\n"); break;
-            case OP_FALSE: push(TIMID_BOOL(false)); logInstruction("vm.c :: run : Push fls\n"); break;
-            case OP_NULL: push(TIMID_NULL); logInstruction("vm.c :: run : Push nul\n"); break;
+            case OP_NEG1: push(TIMID_INT(-1));      break;
+            case OP_0: push(TIMID_INT(0));          break;
+            case OP_1: push(TIMID_INT(1));          break;
+            case OP_2: push(TIMID_INT(2));          break;
+            case OP_TRUE: push(TIMID_BOOL(true));   break;
+            case OP_FALSE: push(TIMID_BOOL(false)); break;
+            case OP_NULL: push(TIMID_NULL);         break;
             case OP_PRINT: {
                 printValue(pop());
                 printf("\n");
-                logInstruction("vm.c :: run : Print value\n");
                 break;
             }
-            case OP_POP: pop(); logInstruction("vm.c :: run : Pop\n"); break;
+            case OP_POP: pop(); break;
             case OP_NEGATE: {
                 Value peeked = peek(0);
                 if (IS_NUMERIC(peeked)) {
@@ -560,28 +459,12 @@ static InterpretResult run() {
                 break;
             }
             case OP_DEFINE_GLOBAL: {
-                // The commented code was from when I experimented with my bytecode format
-                //ObjString* name = READ_STRING();
-                /*Value idx = pop();
-                int intdex = AS_INT(idx);
-                ObjString* name = AS_STRING(vm.block->constants.values[intdex]);*/
-                /*int index;
-                if (READ_BYTE() == OP_CONSTANT) {
-                    index = AS_INT(READ_CONSTANT());
-                } else {
-                    index = AS_INT(READ_CONSTANT_LONG());
-                }
-                ObjString* name = AS_STRING(vm.block->constants.values[index]);*/
-                ObjString* name = READ_STRING(); // Get the variable name
+                ObjString* name = AS_STRING(READ_BYTE_OR_3_BYTES()); // Get the variable name
                 tableSet(&vm.globals, name, peek(0)); // Set the hashmap value to the value on the stack
                 pop(); // Remove the temporary
                 break;
             }
             case OP_GET_GLOBAL: {
-                //ObjString* name = READ_STRING();
-                //Value idx = pop();
-                //int intdex = AS_INT(idx);
-                //ObjString* name = AS_STRING(vm.block->constants.values[intdex]);
                 ObjString* name = READ_STRING();
                 Value value;
                 if (!tableGet(&vm.globals, name, &value)) {
@@ -668,7 +551,8 @@ InterpretResult interpret(uint8_t* bytecode, size_t bytecodeLength) {
     readBytecode(bytecode, bytecodeLength);
 
     #ifdef T_VM_DBG
-    dumpBlock(vm.block, "Block");
+    //dumpBlock(vm.block, "Block");
+    vaPrint(&vm.block->constants);
     disassembleBlock(vm.block, "Block");
     #endif
 

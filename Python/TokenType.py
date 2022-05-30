@@ -62,6 +62,7 @@ T_BWAND = iota()
 
 T_NL = iota() # Newline
 
+T_ARROW = iota() # ->
 T_ASSERT = iota()
 
 T_EOF = iota(True, 100)

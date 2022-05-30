@@ -49,6 +49,9 @@ class Interpreter(Visitor): # TODO: organize REPL runtime
     def visitBlock(self, block: Block):
         self.execute_block(block.statements, Environment(self.environment))
 
+    def visitForStmt(self, stmt: ForStmt):
+        return super().visitForStmt(stmt)
+
     def visitPrintStmt(self, stmt: PrintStmt):
         result = ""
         if stmt.value != None:
@@ -56,6 +59,19 @@ class Interpreter(Visitor): # TODO: organize REPL runtime
         print(ToString(result))
 
     def visitExprStmt(self, stmt: ExprStmt): self.evaluate(stmt.expr)
+
+    def visitForStmt(self, stmt: ForStmt):
+        if stmt.initializer != None:
+            self.execute(stmt.initializer)
+
+        if stmt.condition == None:
+            stmt.condition = LiteralExpr(Token(T_TRUE, "tru", None, Position(0, 0, 0,"", ""), Position(0, 0, 0, "", "")))
+        
+        while self.evaluate(stmt.condition):
+            self.execute(stmt.body)
+
+            if stmt.step != None:
+                self.execute(stmt.step)
 
     def visitWhileStmt(self, stmt: WhileStmt):
         while self.evaluate(stmt.condition):

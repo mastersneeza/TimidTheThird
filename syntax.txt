@@ -1,1 +1,19 @@
 for                 ->  'for' IDENTIFIER '=' expr ',' 
+
+
+
+
+for i 0 {
+
+}
+
+for i 0 -> 10 {
+
+}
+
+for i = 0 -> 10 -> 2 {
+
+}
+
+
+for i=0; i < 10; i = i + 2

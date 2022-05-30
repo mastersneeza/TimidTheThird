@@ -154,13 +154,13 @@ class ExprStmt(Stmt):
     def __repr__(self): return f"(expr {self.expr})"
 
 class ForStmt(Stmt):
-    def __init__(self, body : Stmt, name : Token, condition : Expr = None, step : Expr = None):
+    def __init__(self, kw : Token, body : Stmt, initializer : Stmt = None, condition : Expr = None, step : Expr = None):
         self.body = body
-        self.name = name
+        self.initializer = initializer
         self.condition = condition
         self.step = step
 
-        super().__init__(self.name.pos_start, self.body.pos_end)
+        super().__init__(kw.pos_start, self.body.pos_end)
     def accept(self, visitor): visitor.visitForStmt(self)
 
 class IfStmt(Stmt):

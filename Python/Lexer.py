@@ -7,7 +7,7 @@ from Token import Token, Position
 DIGITS = string.digits
 LETTERS = string.ascii_letters + '_' # Allowed identifier characters
 LETTERS_DIGITS = DIGITS + LETTERS
-WHITESPACE = string.whitespace.replace('\n', '')
+WHITESPACE = string.whitespace
 
 ESCAPE_CHAR = '\\'
 ESCAPE_CHARS = {
@@ -158,7 +158,7 @@ class Lexer:
         self.skip_whitespace()
         match self.current_char:
             case '+': self.single_char_token(T_PLUS)
-            case '-': self.single_char_token(T_MINUS)
+            case '-': self.two_char_token(T_MINUS, T_ARROW, '>')
             case '*': self.single_char_token(T_STAR)
             case '/': self.single_char_token(T_SLASH)
             case '%': self.single_char_token(T_PERCENT)
@@ -181,7 +181,7 @@ class Lexer:
             case '.': self.single_char_token(T_DOT)
             case ',': self.single_char_token(T_COMMA)
             case ':': self.single_char_token(T_COLON)
-            case ';'|'\n': self.single_char_token(T_SEMIC)
+            case ';': self.single_char_token(T_SEMIC)
             case '$': self.single_char_token(T_DOLLAR)
             case '\0': self.single_char_token(T_EOF)
 

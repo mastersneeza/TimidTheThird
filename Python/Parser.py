@@ -121,6 +121,8 @@ class Parser:
         if self.match(T_WHILE): return self.while_stmt(nullable)
         if self.match(T_FOR): return self.for_stmt(nullable)
         if self.match(T_IF): return self.if_stmt(nullable)
+        if self.match(T_ELSE):
+            raise self.error(self.previous_tok, "'else' block outside of 'if' block")
         if self.match(T_PRINT): return self.print_stmt(nullable)
         if self.match(T_LCURL): return self.block(nullable)
         if self.match(T_ASSERT):
@@ -132,7 +134,18 @@ class Parser:
         return self.expr_stmt(nullable)
 
     def for_stmt(self, nullable = False):
-        return ForStmt()
+        kw = self.previous_tok
+        if self.match(T_DOLLAR):
+            initializer = self.var_decl(True)
+        else:
+            initializer = self.expr(True)
+        self.consume("Expected a ',' or initializer statement after 'for' keyword", T_COMMA)
+        condition = self.expr(True)
+        self.consume("Expected a ',' after initializer or ','", T_COMMA)
+        step = self.expr(True)
+        body = self.statement(True)
+        self.check_nonterminal(body, "Expected a 'for' loop body")
+        return ForStmt(kw, body, initializer, condition, step)
 
     def while_stmt(self, nullable = False):
         self.nest_depth += 1

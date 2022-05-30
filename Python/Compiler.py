@@ -69,7 +69,7 @@ class Value:
         self.bytes_ = bytes(temp)
 
     @staticmethod
-    def init_string(string : str):
+    def init_string_(string : str): # Old method
         chars = list(string)
         length = len(chars)
 
@@ -82,6 +82,17 @@ class Value:
                 
         for char in chars:
             str_bytes.append(ord(char)) # Convert each character into a byte
+        return Value(V_STRING, str_bytes)
+
+    @staticmethod
+    def init_string(string : str):
+        chars = list(string)
+
+        str_bytes = []
+
+        for char in chars:
+            str_bytes.append(ord(char)) # Convert each character into a byte
+        str_bytes.append(ord('\0'))
         return Value(V_STRING, str_bytes)
 
     def __repr__(self):
@@ -101,6 +112,8 @@ class Compiler(Visitor):
         self.statements = statements
         self.constants : list[Value] = []
         self.code : list[int] = []
+
+        self.interned_strings : dict[str, int] = {}
 
         self.locals = []
         self.local_count = 0
@@ -142,8 +155,11 @@ class Compiler(Visitor):
     def mark_initialized(self):
         self.locals[self.local_count - 1]["depth"] = self.scope_depth
 
-    def identifier_constant(self, name : Token) -> int:
-        return self.add_value(Value.init_string(name.lexeme))
+    def identifier_constant(self, name : Token) -> int: # Add name to the constant pool and return its index
+        new, index = self.register_string(name.lexeme)
+        if new:
+            self.add_value(Value.init_string(name.lexeme))
+        return index
 
     def define_variable(self, global_idx : int):
         if (self.scope_depth > 0):
@@ -171,24 +187,20 @@ class Compiler(Visitor):
     def named_variable(self, name : Token, is_assign : bool = False):
         get_op, set_op = OP_GET_GLOBAL, OP_SET_GLOBAL
 
-        global_idx = self.resolve_local(name)
-
-        if global_idx != -1:
+        arg = self.resolve_local(name)
+ 
+        if arg != -1:
             get_op = OP_GET_LOCAL
             set_op = OP_SET_LOCAL
         else:
-            global_idx = self.identifier_constant(name)
+            arg = self.identifier_constant(name)
             get_op = OP_GET_GLOBAL
             set_op = OP_SET_GLOBAL
         
-        if is_assign:
-            self.emit_byte(set_op)
-            self.emit_const_w_count(self.constant_count)
-            self.emit_1_or_3(global_idx)
-        else:
-            self.emit_byte(get_op)
-            self.emit_const_w_count(self.constant_count)
-            self.emit_1_or_3(global_idx)
+        if is_assign: self.emit_byte(set_op)
+        else: self.emit_byte(get_op)
+        self.emit_const_w_count(self.constant_count)
+        self.emit_1_or_3(arg)
 
     def dump(self, bytecode : bytes):
         i = 0
@@ -207,7 +219,8 @@ class Compiler(Visitor):
 
     def add_value(self, value : Value):
         self.constants.append(value)
-        return len(self.constants) - 1 # Return the index of the appended value
+        #print([', '.join(''.join([chr(int(y)) for y in x.bytes_]) for x in self.constants)])
+        return self.constant_count - 1 # Return the index of the appended value
 
     def make_bytecode(self):
         bytecode = []
@@ -237,12 +250,18 @@ class Compiler(Visitor):
 
         self.emit_end()
 
-        #self.dump(self.make_bytecode())
+        self.dump(self.make_bytecode())
         #self.dump(self.code)
 
         if ErrorReporter.HAD_ERROR: return
 
         self.write(path)
+
+    def register_string(self, string : str):
+        if string not in self.interned_strings.keys():
+            self.interned_strings[string] = self.constant_count
+            return (True, self.constant_count)
+        return (False, self.interned_strings[string])
 
     def emit_1_or_3(self, number : int):
         if number < 256:
@@ -258,7 +277,11 @@ class Compiler(Visitor):
         self.emit_byte(byte2)
 
     def emit_empty_str(self):
-        self.emit_constant(Value.init_string(""))
+        new, index = self.register_string("")
+        if new:
+            self.add_value(Value.init_string(""))
+        self.emit_const_w_count(index)
+        self.emit_1_or_3(index)
 
     def emit_constant(self, value : Value, with_instruction : bool = True):
         index = self.add_value(value)
@@ -266,7 +289,8 @@ class Compiler(Visitor):
             self.emit_const_w_count(index)
             self.emit_1_or_3(index)
 
-    def emit_const_w_count(self, count : int): self.emit_byte(OP_CONSTANT if count < 256 else OP_CONSTANT_LONG)
+    def emit_const_w_count(self, count : int):
+        self.emit_byte(OP_CONSTANT if count < 256 else OP_CONSTANT_LONG)
 
     def emit_header(self):
         self.emit_byte(HEADER0)
@@ -287,7 +311,6 @@ class Compiler(Visitor):
         self.emit_byte(offset & 0xff)
         self.emit_byte((offset >> 8) & 0xff)
 
-
     def patch_jump(self, expr, offset):
         jump = len(self.code) - offset - 2
 
@@ -297,11 +320,26 @@ class Compiler(Visitor):
         self.code[offset] = jump & 0xff # Little endian
         self.code[offset + 1] = (jump >> 8) & 0xff
 
-    def emit_string(self, string : str, with_instruction = True): self.emit_constant(Value.init_string(string), with_instruction)
+    def emit_string(self, string : str, with_instruction = True):
+        new, index = self.register_string(string)
+
+        if new:
+
+            val = Value.init_string(string)
+            i = self.add_value(val)
+            if i == index and with_instruction:
+                self.emit_const_w_count(index)
+                self.emit_1_or_3(index)
+        else:
+            if with_instruction:
+                self.emit_const_w_count(index)
+                self.emit_1_or_3(index)
 
     def emit_end(self): self.emit_byte(OP_RETURN)
 
     def emit_null(self): self.emit_byte(OP_NULL)
+
+    def emit_pop(self): self.emit_byte(OP_POP)
 
     ### Statements ###
 
@@ -315,21 +353,41 @@ class Compiler(Visitor):
 
     def visitExprStmt(self, stmt: ExprStmt):
         self.visit(stmt.expr)
-        self.emit_byte(OP_POP)
+        self.emit_pop()
+
+    def visitForStmt(self, stmt: ForStmt):
+        if stmt.initializer != None:
+            self.visit(stmt.initializer)
+
+        loop_start = len(self.code)
+        if stmt.condition != None: self.visit(stmt.condition)
+        else: self.emit_byte(OP_TRUE)        
+
+        exit_jump = self.emit_jump(OP_JUMP_IF_FLS)
+        self.emit_pop()
+
+        self.visit(stmt.body)
+
+        if stmt.step != None:
+            self.visit(stmt.step)
+
+        self.emit_loop(stmt.body, loop_start)
+
+        self.patch_jump(stmt, exit_jump)
+        self.emit_pop()
 
     def visitIfStmt(self, stmt: IfStmt):
         self.visit(stmt.condition)
 
         then_jump = self.emit_jump(OP_JUMP_IF_FLS)
-        self.emit_byte(OP_POP)
+        self.emit_pop()
 
         self.visit(stmt.if_branch)
 
         else_jump = self.emit_jump(OP_JUMP)
 
         self.patch_jump(stmt.if_branch, then_jump)
-
-        self.emit_byte(OP_POP)
+        self.emit_pop()
 
         if stmt.else_branch != None:
             self.visit(stmt.else_branch)
@@ -337,28 +395,24 @@ class Compiler(Visitor):
         self.patch_jump(stmt.if_branch if stmt.else_branch == None else stmt.else_branch, else_jump)
 
     def visitPrintStmt(self, stmt: PrintStmt):
-        if stmt.value == None:
-            self.emit_empty_str()
-        else:
-            self.visit(stmt.value)
+        if stmt.value == None: self.emit_empty_str()
+        else: self.visit(stmt.value)
         self.emit_byte(OP_PRINT)
 
     def visitVarDeclStmt(self, stmt: VarDeclStmt):
         global_idx = self.parse_variable(stmt.name)
-
         if stmt.initializer == None:
             self.emit_null()
         else:
             self.visit(stmt.initializer)
-        
         self.define_variable(global_idx)
 
     def visitWhileStmt(self, stmt: WhileStmt):
         loop_start = len(self.code)
         self.visit(stmt.condition)
 
-        exitJump = self.emit_jump(OP_JUMP_IF_FLS)
-        self.emit_byte(OP_POP)
+        exit_jump = self.emit_jump(OP_JUMP_IF_FLS)
+        self.emit_pop()
 
         self.begin_scope()
 
@@ -368,8 +422,8 @@ class Compiler(Visitor):
 
         self.emit_loop(stmt.body, loop_start)
 
-        self.patch_jump(stmt, exitJump)
-        self.emit_byte(OP_POP)
+        self.patch_jump(stmt, exit_jump)
+        self.emit_pop()
 
     ### Expressions ###
 
@@ -413,7 +467,8 @@ class Compiler(Visitor):
         value = expr.token.value
         expr_type = expr.token.type
 
-        if expr_type == T_STRING: self.emit_string(expr.token.lexeme) 
+        if expr_type == T_STRING:
+            self.emit_string(expr.token.lexeme) 
         elif expr_type in (T_TRUE, T_FALSE): self.emit_byte(OP_TRUE if expr.token.type == T_TRUE else OP_FALSE)
         elif expr_type == T_NULL: self.emit_null()
         elif expr.token.type == T_FLOAT: self.emit_constant(Value(V_FLOAT, struct.pack('=d', value))) #Use native byte order for constants
@@ -435,15 +490,14 @@ class Compiler(Visitor):
         self.visit(expr.condition)
 
         then_jump = self.emit_jump(OP_JUMP_IF_FLS)
-        self.emit_byte(OP_POP)
+        self.emit_pop()
 
         self.visit(expr.if_branch)
 
         else_jump = self.emit_jump(OP_JUMP)
 
         self.patch_jump(expr.if_branch, then_jump)
-        
-        self.emit_byte(OP_POP)
+        self.emit_pop()
 
         if expr.else_branch != None:
             self.visit(expr.else_branch)

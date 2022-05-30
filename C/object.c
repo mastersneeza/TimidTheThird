@@ -56,7 +56,7 @@ ObjString* makeString(bool ownsChars, char* chars, int length) { // Maintains a 
     string->hash = hash;
     tableSet(&vm.strings, string, TIMID_NULL); // Intern string
     #ifdef T_OBJ_DBG
-    printf("object.c :: makeString : make string %p with%sownership\n", string, !ownsChars ? "out " : " ");
+    printf("object.c :: makeString : make string %p with%s ownership\n", string, !ownsChars ? "out" : "");
     #endif
     return string;
 }
@@ -104,7 +104,7 @@ bool objTruth(Value value) {
     switch (AS_OBJ(value)->type) {
         case OBJ_STRING: {
             ObjString* string = AS_STRING(value);
-            return string->length > 1; // See if the string contains more than the NULL terminator charactor
+            return string->length > 0; // See if the string contains more than the NULL terminator character
         }
         default:
             return false;
