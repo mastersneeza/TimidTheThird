@@ -3,14 +3,13 @@
 ### A small programming language that has no reason to be
 
 The third repo
-> RIP to the [first one](https://github.com/mastersneeza/Timid) - got too messy
-
+> RIP to the [first one](https://github.com/mastersneeza/Timid) - got too messy<br/>
 > RIP to the second one - lasted 10 minutes before deletion
 
-Timid is a (small?) language
-Why does it exist? I dunno.
-Do I want it to exist? Maybe.
-Can it become useful? Possibly.
+Timid is a (small?) language.<br/>
+Why does it exist? I dunno.<br/>
+Do I want it to exist? Maybe.<br/>
+Can it become useful? Possibly.<br/>
 
 I NEED AN ICON OR LOGO HELP (see Development)
 
@@ -38,7 +37,7 @@ I NEED AN ICON OR LOGO HELP (see Development)
 - Classes and other OOP (going to be copypasted from Crafting Interpreters)
 - Better error handling and static analysis
 - String functions
-- Collections (array, tuple, dictionary, stack)\
+- Collections (array, tuple, dictionary, stack)
 - More IO stuffs (file reading, idk)
 - Imports and exports
 - Typing and type annotations (maybe add ```const``` keyword too)
@@ -48,7 +47,7 @@ I NEED AN ICON OR LOGO HELP (see Development)
 - UTF-8 encoded strings
 
 Quotes from the creator (me):
-> sex
+> sex<br/>
 > doit
 
 ## References
@@ -100,5 +99,5 @@ gcc TimidTheThird/C/*.c -o Timid
 
 ## Development
 
-Timid wants logo. Timid wants power.
+Timid wants logo. Timid wants power.<br/>
 Help.
