@@ -119,6 +119,8 @@ class Compiler(Visitor):
         self.local_count = 0
         self.scope_depth = 0
 
+        self.debug = False
+
     def visit(self, expr : Expr | Stmt): expr.accept(self)
 
     # Variable methods
@@ -204,6 +206,7 @@ class Compiler(Visitor):
 
     def dump(self, bytecode : bytes):
         i = 0
+        self.debug = True
         for byte in bytecode:
             print(hex(byte)[2:].rjust(2, '0'), end = ' ')
 
@@ -250,12 +253,13 @@ class Compiler(Visitor):
 
         self.emit_end()
 
-        self.dump(self.make_bytecode())
+        #self.dump(self.make_bytecode())
         #self.dump(self.code)
 
         if ErrorReporter.HAD_ERROR: return
 
         self.write(path)
+        assert not self.debug, "Still in debug mode"
 
     def register_string(self, string : str):
         if string not in self.interned_strings.keys():
