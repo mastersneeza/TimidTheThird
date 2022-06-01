@@ -1,5 +1,7 @@
 # Timid
 
+VERSION 000 (idk how to version stuff)
+
 ### A small programming language that has no reason to be
 
 The third repo
@@ -15,6 +17,8 @@ I NEED AN ICON OR LOGO HELP (see Development)
 
 ## What's new (no one asked)
 
+- Added ```break``` statement
+- Added ```forever``` loop construct
 - Added ```for``` loops
 - Reworked string encoding in ```.timb``` files
 - Removal of semicolon delimitter - Now you do not need to terminate statements with semicolons
@@ -26,8 +30,8 @@ I NEED AN ICON OR LOGO HELP (see Development)
 - User input
 - Simple types (int, float, bool, string, null)
 - Block syntax (```{}``` to surround statements)
-- Control flow (```if```, ```while```, ```for```) (I might add a ```forever``` block)
-- Assertions (```|- condition error_msg```)
+- Control flow (```if```, ```while```, ```for```, ```forever```) (I might add a ```forever``` block)
+- Assertions (```|- condition error_msg```) (only in the Python version because I cant do C)
 - That's it (what???)
 
 ## Coming soon (or maybe never)
@@ -48,7 +52,8 @@ I NEED AN ICON OR LOGO HELP (see Development)
 
 Quotes from the creator (me):
 > sex<br/>
-> doit
+> doit<br/>
+> "Quandale Dingle is my lord an saviour. He allowed me to see all the things you are not allowed to see. I also found my father, and gained 1 000 000 000 dollars"
 
 ## References
 
