@@ -550,9 +550,8 @@ InterpretResult interpret(uint8_t* bytecode, size_t bytecodeLength) {
     
     readBytecode(bytecode, bytecodeLength);
 
-    #ifdef T_VM_DBG
-    //dumpBlock(vm.block, "Block");
-    vaPrint(&vm.block->constants);
+    #ifndef T_VM_DBG
+    dumpBlock(vm.block, "Block");
     disassembleBlock(vm.block, "Block");
     #endif
 

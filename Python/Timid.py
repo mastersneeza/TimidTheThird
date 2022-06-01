@@ -14,6 +14,8 @@ class Interpreter(Visitor): # TODO: organize REPL runtime
         self.globals = Environment()
         self.environment = self.globals
 
+        self.should_break = False
+
         self.globals.define("Clock", Clock())
 
     def interpret(self, statements : list[Stmt]):
@@ -65,17 +67,30 @@ class Interpreter(Visitor): # TODO: organize REPL runtime
             self.execute(stmt.initializer)
 
         if stmt.condition == None:
-            stmt.condition = LiteralExpr(Token(T_TRUE, "tru", None, Position(0, 0, 0,"", ""), Position(0, 0, 0, "", "")))
+            stmt.condition = LiteralExpr(Token(T_TRUE, "tru", None, Position(0, 0, 0, "", ""), Position(0, 0, 0, "", "")))
         
         while self.evaluate(stmt.condition):
+            if self.should_break: break
             self.execute(stmt.body)
 
             if stmt.step != None:
                 self.execute(stmt.step)
+        self.should_break = False
+
+    def visitForeverStmt(self, stmt: ForeverStmt):
+        while True:
+            if self.should_break: break
+            self.execute(stmt.body)
+        self.should_break = False
 
     def visitWhileStmt(self, stmt: WhileStmt):
         while self.evaluate(stmt.condition):
+            if self.should_break: break
             self.execute(stmt.body)
+        self.should_break = False
+
+    def visitBreakStmt(self, stmt: BreakStmt):
+        self.should_break = True
 
     def visitIfStmt(self, stmt: IfStmt):
         condition = self.evaluate(stmt.condition)

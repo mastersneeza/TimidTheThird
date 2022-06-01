@@ -145,6 +145,11 @@ class Block(Stmt):
         string = '\n'.join(str_stmts)
         return f"{{{string}}}"
 
+class BreakStmt(Stmt):
+    def __init__(self, kw : Token):
+        super().__init__(kw.pos_start, kw.pos_end)
+    def accept(self, visitor): return visitor.visitBreakStmt(self)
+
 class ExprStmt(Stmt):
     def __init__(self, expr : Expr):
         self.expr = expr
@@ -162,6 +167,12 @@ class ForStmt(Stmt):
 
         super().__init__(kw.pos_start, self.body.pos_end)
     def accept(self, visitor): visitor.visitForStmt(self)
+
+class ForeverStmt(Stmt):
+    def __init__(self, kw : Token, body : Stmt):
+        self.body = body
+        super().__init__(kw.pos_start, body.pos_end)
+    def accept(self, visitor): visitor.visitForeverStmt(self)
 
 class IfStmt(Stmt):
     def __init__(self, condition : Expr, if_branch : Stmt, else_branch : Stmt = None):
@@ -216,8 +227,10 @@ class Visitor:
     
     def visitAssertStmt(self, stmt : AssertStmt): pass
     def visitBlock(self, block : Block): pass
+    def visitBreakStmt(self, stmt : BreakStmt): pass
     def visitExprStmt(self, stmt : ExprStmt): pass
     def visitForStmt(self, stmt : ForStmt): pass
+    def visitForeverStmt(self, stmt : ForeverStmt): pass
     def visitIfStmt(self, stmt : IfStmt): pass
     def visitPrintStmt(self, stmt : PrintStmt): pass
     def visitVarDeclStmt(self, stmt : VarDeclStmt): pass

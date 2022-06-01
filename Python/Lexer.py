@@ -32,7 +32,9 @@ KEYWORDS = {
     'if': T_IF,
     'else': T_ELSE,
     'while': T_WHILE,
-    'for': T_FOR
+    'for': T_FOR,
+    'forever': T_FOREVER,
+    'break': T_BREAK
 }
 
 class Lexer:

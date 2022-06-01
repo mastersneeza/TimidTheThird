@@ -119,6 +119,11 @@ class Parser:
         if self.is_at_end or self.check(T_RCURL): # If end of file or end of block, ignore
             return None
         if self.match(T_WHILE): return self.while_stmt(nullable)
+        if self.match(T_FOREVER):
+            kw = self.previous_tok
+            body = self.statement(True)
+            self.check_nonterminal(body, "Expected a 'forever' loop body")
+            return ForeverStmt(kw, body)
         if self.match(T_FOR): return self.for_stmt(nullable)
         if self.match(T_IF): return self.if_stmt(nullable)
         if self.match(T_ELSE):
@@ -131,6 +136,9 @@ class Parser:
             message = self.expr(True)
             
             return AssertStmt(kw, condition, message)
+        if self.match(T_BREAK):
+            kw = self.previous_tok
+            return BreakStmt(kw)
         return self.expr_stmt(nullable)
 
     def for_stmt(self, nullable = False):
@@ -190,8 +198,7 @@ class Parser:
 
         if_branch = self.statement(True)
 
-        if if_branch == None:
-            raise self.error(self.current_tok, f"Expected an 'if' statement body (after '{self.previous_tok.lexeme}')")
+        self.check_nonterminal(if_branch, f"Expected an 'if' statement body")
 
         else_branch = None
 
@@ -210,7 +217,8 @@ class Parser:
         return PrintStmt(kw, value)
     
     def expr_stmt(self, nullable = False):
-        value = self.expr(nullable)
+        value = self.expr(True)
+        self.check_nonterminal(value, "Expected a statement")
         return ExprStmt(value)
 
     # Expressions
@@ -355,7 +363,7 @@ class Parser:
             return expr
 
         if not nullable:
-            raise self.error(self.current_tok, "Expected an expression") # Default error message
+            raise self.error(self.current_tok, "Expected an expression, a boolean, a string, a number, or 'nul'") # Default error message
         
         return None
 
