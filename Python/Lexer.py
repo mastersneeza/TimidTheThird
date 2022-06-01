@@ -34,7 +34,8 @@ KEYWORDS = {
     'while': T_WHILE,
     'for': T_FOR,
     'forever': T_FOREVER,
-    'break': T_BREAK
+    'break': T_BREAK,
+    'continue': T_CONTINUE
 }
 
 class Lexer:
@@ -190,7 +191,7 @@ class Lexer:
             case '|': self.two_char_token(T_BWOR, T_ASSERT, '-')
 
             case '"' | '\'': self.make_string(self.current_char)
-            case '~':
+            case '#':
                 self.advance()
                 if self.current_char == '~':
                     self.advance()

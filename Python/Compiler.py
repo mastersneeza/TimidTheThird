@@ -2,53 +2,8 @@ from Enum import iota
 from Error import ErrorReporter
 from Nodes import *
 from Token import Token
-
-### Opcodes ###
-OP_NOP = iota(True)
-OP_CONSTANT = iota()
-OP_CONSTANT_LONG = iota()
-OP_NEG1 = iota()
-OP_0 = iota()
-OP_1 = iota()
-OP_2 = iota()
-
-OP_TRUE = iota()
-OP_FALSE = iota()
-OP_NULL = iota()
-
-OP_PRINT = iota()
-OP_POP = iota()
-OP_NEGATE = iota()
-OP_NOT = iota()
-OP_FACT = iota()
-
-OP_ADD = iota()
-OP_SUB = iota()
-OP_MUL = iota()
-OP_DIV = iota()
-OP_MOD = iota()
-OP_POW = iota()
-OP_EQ = iota()
-OP_LT = iota()
-OP_GT = iota()
-OP_AND = iota()
-OP_OR = iota()
-
-OP_JUMP_IF_FLS = iota()
-OP_JUMP = iota()
-OP_LOOP = iota()
-
-OP_DEFINE_GLOBAL = iota()
-OP_GET_GLOBAL = iota()
-OP_SET_GLOBAL = iota()
-OP_GET_LOCAL = iota()
-OP_SET_LOCAL = iota()
-
-OP_GET_INPUT = iota()
-
-OP_SUBSCRIPT = iota()
-
-OP_RETURN = iota()
+from Globals import COMPILER_DEBUG
+from Opcodes import *
 
 ### Headers ###
 HEADER0 = 0xFA
@@ -67,22 +22,6 @@ class Value:
         temp = list(bytes_)
         temp.insert(0, self.type)
         self.bytes_ = bytes(temp)
-
-    @staticmethod
-    def init_string_(string : str): # Old method
-        chars = list(string)
-        length = len(chars)
-
-        strlen = struct.pack('<I', length) # Emit the bytes as an unsigned 32 bit integer
-
-        str_bytes = []
-
-        for byte in strlen:
-            str_bytes.append(byte)
-                
-        for char in chars:
-            str_bytes.append(ord(char)) # Convert each character into a byte
-        return Value(V_STRING, str_bytes)
 
     @staticmethod
     def init_string(string : str):
@@ -118,6 +57,7 @@ class Chunk:
     @property
     def constant_count(self): return len(self.constants)
 
+    @property
     def as_bytes(self):
         bytecode = []
         constants = []
@@ -135,14 +75,11 @@ class Chunk:
         self.code.append(byte)
 
     def emit_bytes(self, *bytes : tuple[int]):
-        for byte in bytes:
-            self.emit_byte(byte)
+        for byte in bytes: self.emit_byte(byte)
 
     def emit_1_or_3(self, index : int):
-        if index < 256:
-            self.emit_byte(index)
-        else:
-            self.emit_bytes(index & 0xff, (index >> 8) & 0xff, (index >> 16) & 0xff)
+        if index < 256: self.emit_byte(index)
+        else: self.emit_bytes(index & 0xff, (index >> 8) & 0xff, (index >> 16) & 0xff)
 
     def emit_constant(self, value : Value, with_instruction : bool = True):
         index = self.add_value(value)
@@ -150,12 +87,9 @@ class Chunk:
             self.emit_const_w_count(index)
             self.emit_1_or_3(index)
 
-    def emit_const_w_count(self, count : int):
-        self.emit_byte(OP_CONSTANT if count < 256 else OP_CONSTANT_LONG)
+    def emit_const_w_count(self, count : int): self.emit_byte(OP_CONSTANT if count < 256 else OP_CONSTANT_LONG)
 
-    def emit_header(self):
-        self.emit_byte(HEADER0)
-        self.emit_byte(HEADER1)
+    def emit_header(self): self.emit_bytes(HEADER0, HEADER1)
 
     def emit_jump(self, instruction : int):
         self.emit_byte(instruction)
@@ -193,14 +127,18 @@ class Chunk:
     def dump(self, bytecode : bytes):
         i = 0
         for byte in bytecode:
-            print(hex(byte)[2:].rjust(2, '0'), end = ' ')
+            clog(hex(byte)[2:].rjust(2, '0'), end = ' ')
 
             if i >= 7:
-                print("")
+                clog()
                 i = 0
                 continue
             i += 1
-        print("\n")
+        clog("\n")
+
+def clog(message, end = '\n'): # Prints only if debug is enabled
+    if COMPILER_DEBUG:
+        print(message, end = end)
     
 class Compiler(Visitor):
     def __init__(self, statements : list[Stmt]):
@@ -214,12 +152,14 @@ class Compiler(Visitor):
         self.scope_depth = 0
 
         self.break_position = -1
+        self.continue_position = -1
 
         self.inner_loop_start = -1
         self.inner_loop_end = -1
         self.breaking = False
+        self.continuing = False
 
-        self.debug = False
+        self.continue_type = OP_LOOP # Because continue in for loops can jump either forwards or backwards, but typically it jumps back to the top
 
     @property
     def chunk(self): return self._chunk
@@ -232,6 +172,7 @@ class Compiler(Visitor):
         self.scope_depth -= 1
 
         while self.local_count > 0 and self.locals[self.local_count - 1]["depth"] > self.scope_depth: # Pop all the locals at the end of the scope
+            clog("End scope pop")
             self.chunk.emit_pop()
             self.local_count -= 1
 
@@ -302,22 +243,22 @@ class Compiler(Visitor):
             get_op = OP_GET_GLOBAL
             set_op = OP_SET_GLOBAL
         
-        if is_assign: self.chunk.emit_byte(set_op)
-        else: self.chunk.emit_byte(get_op)
+        if is_assign:
+            self.chunk.emit_byte(set_op)
+        else:
+            self.chunk.emit_byte(get_op)
         self.chunk.emit_const_w_count(self.chunk.constant_count)
         self.chunk.emit_1_or_3(arg)
 
     def write(self, path : str):
-        bytecode = self.chunk.as_bytes()
+        bytecode = self.chunk.as_bytes
 
         # TODO: write to file
 
         with open(path, "wb") as f:
            f.write(bytes(bytecode))
 
-    def dump(self):
-        self.debug = True
-        self.chunk.dump(self.chunk.as_bytes())
+    def dump(self): self.chunk.dump(self.chunk.as_bytes)
 
     def compile(self, path : str):
         self.chunk.emit_header()
@@ -326,51 +267,45 @@ class Compiler(Visitor):
 
         self.chunk.emit_end()
 
-        #self.dump()
-        #self.dump(self.code)
-
         if ErrorReporter.HAD_ERROR: return
 
         self.write(path)
-        assert not self.debug, "Still in debug mode"
+        assert not COMPILER_DEBUG, "Still in debug mode"
 
-    def register_string(self, string : str):
-        if string not in self.interned_strings.keys():
+    def register_string(self, string : str): # For string interning optimisation, returns true if the string is unique and new
+        if string not in self.interned_strings.keys(): # If new string
             self.interned_strings[string] = self.chunk.constant_count
-            return (True, self.chunk.constant_count)
-        return (False, self.interned_strings[string])
+            return (True, self.chunk.constant_count) # Return index of string in constant pool
+        return (False, self.interned_strings[string]) # Otherwise return the index of the furst string in the constant pool
 
     def emit_empty_str(self):
-        new, index = self.register_string("")
+        new, index = self.register_string("") # There might not have been an empty string registered yet
         if new:
-            self.chunk.add_value(Value.init_string(""))
-        self.chunk.emit_const_w_count(index)
+            self.chunk.add_value(Value.init_string("")) # If not then add it
+        self.chunk.emit_const_w_count(index) # We shouldn't have to decide if we want to push it to the stack because there is no reason not to
         self.chunk.emit_1_or_3(index)
 
-    def emit_constant(self, value : Value, with_instruction : bool = True):
+    def emit_constant(self, value : Value, with_instruction : bool = True): # Adds a constant to the constant pool. If with_instruction is false then the push instruction will not be emitted
         index = self.chunk.add_value(value)
         if with_instruction:
             self.chunk.emit_const_w_count(index)
             self.chunk.emit_1_or_3(index)
 
     def emit_string(self, string : str, with_instruction = True):
-        new, index = self.register_string(string)
+        new, index = self.register_string(string) # Check for interned strings
 
         if new:
-
             val = Value.init_string(string)
-            i = self.chunk.add_value(val)
-            if i == index and with_instruction:
-                self.chunk.emit_const_w_count(index)
-                self.chunk.emit_1_or_3(index)
-        else:
-            if with_instruction:
-                self.chunk.emit_const_w_count(index)
-                self.chunk.emit_1_or_3(index)
+            i = self.chunk.add_value(val) # Confirm that the string index matches the calculated index
+            assert i == index, "WTF happened with string interning"
+
+        if with_instruction:
+            self.chunk.emit_const_w_count(index)
+            self.chunk.emit_1_or_3(index)
 
     def patch_break(self, stmt : Stmt): # Take statement position for error reporting
         if self.breaking: # If we encountered a break statatement recently that hasnt been handled
-            jump_distance = self.inner_loop_end - self.break_position - 2 # Get jump size
+            jump_distance = self.inner_loop_end - self.break_position - 2 # Get jump size between the required position to jump to and the break instruction
 
             if jump_distance > 2**16 - 1:
                 ErrorReporter.compile_error(stmt, "Too much code to jump")
@@ -378,6 +313,19 @@ class Compiler(Visitor):
             self.chunk.code[self.break_position] = jump_distance & 0xff # Little endian
             self.chunk.code[self.break_position + 1] = (jump_distance >> 8) & 0xff
             self.breaking = False # Turn of toggle to prevent overwriting the instruction
+
+    def patch_continue(self, stmt : Stmt, jump_pos : int = -1): # Take statement position for error reporting
+        if self.continuing: # If we encountered a continue statatement recently that hasnt been handled
+            if jump_pos == -1:
+                jump_pos = self.inner_loop_start
+            jump_distance = abs(jump_pos - self.continue_position - 2) # Get jump size
+
+            if jump_distance > 2**16 - 1:
+                ErrorReporter.compile_error(stmt, "Too much code to jump")
+
+            self.chunk.code[self.continue_position] = jump_distance & 0xff # Little endian
+            self.chunk.code[self.continue_position + 1] = (jump_distance >> 8) & 0xff
+            self.continuing = False # Turn of toggle to prevent overwriting the instruction
 
     ### Return the original position
 
@@ -391,7 +339,7 @@ class Compiler(Visitor):
         self.inner_loop_end = self.chunk.code_length
         return previous
 
-    def exit_loop(self, previous_start, previous_end):
+    def exit_loop(self, previous_start, previous_end): # Resets positions, at the end of program should both be -1
         self.inner_loop_start = previous_start
         self.inner_loop_end = previous_end
 
@@ -407,17 +355,28 @@ class Compiler(Visitor):
 
     def visitBreakStmt(self, stmt: BreakStmt):
         if self.inner_loop_start == -1:
-            ErrorReporter.compile_error("Break outside of loop")
+            ErrorReporter.compile_error(stmt, "Break statement outside of loop")
         self.break_position = self.chunk.emit_jump(OP_JUMP)
         self.breaking = True # Set to true to allow for patching
 
+    def visitContinueStmt(self, stmt: ContinueStmt):
+        if self.inner_loop_start == -1:
+            ErrorReporter.compile_error(stmt, "Continue statement outside of loop")
+        self.continue_position = self.chunk.emit_jump(self.continue_type)
+        self.continuing = True
+
     def visitExprStmt(self, stmt: ExprStmt):
         self.visit(stmt.expr)
+        clog("Expr pop")
         self.chunk.emit_pop()
 
     def visitForStmt(self, stmt: ForStmt):
         if stmt.initializer != None:
             self.visit(stmt.initializer)
+
+        previous_continue_type = self.continue_type
+        if stmt.step != None: # If there is a step, it will be at the very end of the body, and in a for loop, continue should jump to the step statement before looping
+            self.continue_type = OP_JUMP
 
         previous_start = self.begin_loop()
 
@@ -427,19 +386,24 @@ class Compiler(Visitor):
             self.visit(stmt.condition)
 
             exit_jump = self.chunk.emit_jump(OP_JUMP_IF_FLS)
+            clog("For stmt condition pop")
             self.chunk.emit_pop()
 
         self.begin_scope()
 
         self.visit(stmt.body)
 
+        continue_pos = -1
+
         if stmt.step != None:
+            continue_pos = self.chunk.code_length # If there is a step the VM needs to know where to go for the step in the case of a continue
             self.visit(stmt.step)
         
         self.chunk.emit_loop(stmt.body, self.inner_loop_start)
         
         if exit_jump != -1:
             self.chunk.patch_jump(stmt, exit_jump)
+            clog("For stmt exit pop")
             self.chunk.emit_pop()
 
         self.end_scope()
@@ -447,8 +411,11 @@ class Compiler(Visitor):
         previous_end = self.end_loop()
 
         self.patch_break(stmt)
+        self.patch_continue(stmt, continue_pos)
 
         self.exit_loop(previous_start, previous_end)
+
+        self.continue_type = previous_continue_type
 
     def visitForeverStmt(self, stmt: ForeverStmt):
         previous_start = self.begin_loop()
@@ -462,6 +429,7 @@ class Compiler(Visitor):
         previous_end = self.end_loop()
 
         self.patch_break(stmt)
+        self.patch_continue(stmt)
 
         self.exit_loop(previous_start, previous_end)
 
@@ -469,6 +437,7 @@ class Compiler(Visitor):
         self.visit(stmt.condition)
 
         then_jump = self.chunk.emit_jump(OP_JUMP_IF_FLS)
+        clog("If stmt if clause pop")
         self.chunk.emit_pop()
 
         self.visit(stmt.if_branch)
@@ -476,6 +445,7 @@ class Compiler(Visitor):
         else_jump = self.chunk.emit_jump(OP_JUMP)
 
         self.chunk.patch_jump(stmt.if_branch, then_jump)
+        clog("If stmt else clause pop")
         self.chunk.emit_pop()
 
         if stmt.else_branch != None:
@@ -502,6 +472,7 @@ class Compiler(Visitor):
         self.visit(stmt.condition)
 
         exit_jump = self.chunk.emit_jump(OP_JUMP_IF_FLS)
+        clog("While stmt condition pop")
         self.chunk.emit_pop()
 
         self.begin_scope()
@@ -513,11 +484,13 @@ class Compiler(Visitor):
         self.chunk.emit_loop(stmt.body, self.inner_loop_start)
 
         self.chunk.patch_jump(stmt, exit_jump)
+        clog("While stmt exit pop")
         self.chunk.emit_pop()
 
         previous_end = self.end_loop()
 
         self.patch_break(stmt)
+        self.patch_continue(stmt)
 
         self.exit_loop(previous_start, previous_end)
 
@@ -606,10 +579,10 @@ class Compiler(Visitor):
         op = expr.operator.type
 
         if op == T_MINUS:
-            if self.code[-1] == OP_1: # If the number is -1 we can emit a specific instruction for it
-                self.code[-1] = OP_NEG1
+            if self.chunk.code[-1] == OP_1: # If the number is -1 we can emit a specific instruction for it
+                self.chunk.code[-1] = OP_NEG1
                 return
-            self.emit_byte(OP_NEGATE)
+            self.chunk.emit_byte(OP_NEGATE)
         elif op == T_NOT: self.chunk.emit_byte(OP_NOT)
         elif op == T_PLUS: return
 

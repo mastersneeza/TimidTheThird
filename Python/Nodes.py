@@ -150,6 +150,11 @@ class BreakStmt(Stmt):
         super().__init__(kw.pos_start, kw.pos_end)
     def accept(self, visitor): return visitor.visitBreakStmt(self)
 
+class ContinueStmt(Stmt):
+    def __init__(self, kw : Token):
+        super().__init__(kw.pos_start, kw.pos_end)
+    def accept(self, visitor): return visitor.visitContinueStmt(self)
+
 class ExprStmt(Stmt):
     def __init__(self, expr : Expr):
         self.expr = expr
@@ -228,6 +233,7 @@ class Visitor:
     def visitAssertStmt(self, stmt : AssertStmt): pass
     def visitBlock(self, block : Block): pass
     def visitBreakStmt(self, stmt : BreakStmt): pass
+    def visitContinueStmt(self, stmt : ContinueStmt): pass
     def visitExprStmt(self, stmt : ExprStmt): pass
     def visitForStmt(self, stmt : ForStmt): pass
     def visitForeverStmt(self, stmt : ForeverStmt): pass

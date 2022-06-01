@@ -1,0 +1,12 @@
+# Is the user sus??? Owo ( cringe )
+
+$input;
+
+forever {
+    input = in "Enter "
+
+    if input == "Amongus"
+        break
+
+    print "You are sus"
+}

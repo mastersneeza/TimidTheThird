@@ -1,4 +1,4 @@
-~ Simple truth machine program
+# Simple truth machine program
 
 $input = in "Enter 1 or 0 "
 

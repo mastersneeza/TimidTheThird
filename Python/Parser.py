@@ -136,9 +136,8 @@ class Parser:
             message = self.expr(True)
             
             return AssertStmt(kw, condition, message)
-        if self.match(T_BREAK):
-            kw = self.previous_tok
-            return BreakStmt(kw)
+        if self.match(T_BREAK): return BreakStmt(self.previous_tok)
+        if self.match(T_CONTINUE): return ContinueStmt(self.previous_tok)
         return self.expr_stmt(nullable)
 
     def for_stmt(self, nullable = False):

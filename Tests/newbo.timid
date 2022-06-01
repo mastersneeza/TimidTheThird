@@ -1,4 +1,4 @@
-~ Bottles of beer with for loop
+# Bottles of beer with for loop
 
 for $howManyBottles = 99, howManyBottles > 0, howManyBottles = howManyBottles - 1 {
     print howManyBottles + " bottles of beer on the wall, "

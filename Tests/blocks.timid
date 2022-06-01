@@ -1,0 +1,26 @@
+# Test for global and local variables
+
+$ a = "Global"
+
+print a
+
+{
+    print a
+
+    $ a = "Local"
+
+    print a
+
+    {
+        $ a = "Innermost"
+
+        print a
+    }
+
+    print a
+}
+
+if a != "Global" {
+    print "Uh oh, something went wrong!"
+} else
+    print a

@@ -380,7 +380,7 @@ static InterpretResult run() {
                             printf("Division by zero\n");
                             return INTERPRET_RUNTIME_ERROR;
                         } 
-                        push(TIMID_FLOAT(fmod(toFloat(a), toFloat(b))));
+                        push(TIMID_FLOAT((t_float)fmod(toFloat(a), toFloat(b))));
                     }
                     else {
                         if (toInt(b) == 0) {
@@ -402,15 +402,17 @@ static InterpretResult run() {
                         if (toFloat(a) == 0 && toFloat(b) == 0) {
                             printf("Zero to zero\n");
                             return INTERPRET_RUNTIME_ERROR;
-                        } 
-                        push(TIMID_FLOAT(pow(toFloat(a), toFloat(b))));
+                        }
+                        
+                        push(TIMID_FLOAT((t_float)pow(toFloat(a), toFloat(b))));
                     }
                     else {
                         if (toInt(a) == 0 && toInt(b) == 0) {
                             printf("Zero to zero\n");
                             return INTERPRET_RUNTIME_ERROR;
-                        } 
-                        push(TIMID_INT(pow(toInt(a), toInt(b))));
+                        }
+                        t_float result = (t_float)pow(toInt(a), toInt(b));
+                        push(TIMID_INT((t_int)result));
 
                     }
                     break;
@@ -550,7 +552,7 @@ InterpretResult interpret(uint8_t* bytecode, size_t bytecodeLength) {
     
     readBytecode(bytecode, bytecodeLength);
 
-    #ifndef T_VM_DBG
+    #ifdef T_VM_DBG
     dumpBlock(vm.block, "Block");
     disassembleBlock(vm.block, "Block");
     #endif

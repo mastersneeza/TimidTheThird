@@ -1,7 +1,7 @@
-~ This file is for testing the parsing of newlines and semicolons, because statement terminators are newlines
-~ Semicolons can also be used in place of newlines for the REPL
+# This file is for testing the parsing of newlines and semicolons, because statement terminators are newlines
+# Semicolons can also be used in place of newlines for the REPL
 
-~ Random newlines
+# Random newlines
 
 
 
@@ -20,10 +20,10 @@ print "Inline print 1";;;;;;print "Inline print 2"
 
 
 
-~ Single line comment
+# Single line comment
 
 
-~~ Multi
+#~ Multi
 line
 
 comment ~
@@ -46,7 +46,7 @@ print "After comment"
 
     print "Block after many semic or newline";;
 
-    ~~ 
+    #~ 
     
     many
 

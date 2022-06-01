@@ -1,0 +1,40 @@
+# Convert a string to an integer
+
+$ num = in "Enter number: " ;  # Get user to start with a full stop
+$ c ; # Current char
+$ index = 0 ;
+$ result = 0 ;
+$ n = 0;
+
+forever { # The user must start their number with a dot because I don't have string length yet...
+    c = num[(- index) - 1]; # Walk backwards from the end of the string
+    if c == '.' {
+        print result
+        break
+    }
+
+    if c == '0'
+        n = 0;
+    if c == '1'
+        n = 1;
+    if c == '2'
+        n = 2;
+    if c == '3'
+        n = 3;
+    if c == '4'
+        n = 4;
+    if c == '5'
+        n = 5;
+    if c == '6'
+        n = 6;
+    if c == '7'
+        n = 7;
+    if c == '8'
+        n = 8;
+    if c == '9'
+        n = 9;
+    $ exponent = 10 ^ index
+    $ newPlace = n * exponent
+    result = result + newPlace
+    index = index + 1;
+}

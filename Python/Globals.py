@@ -1,0 +1,3 @@
+VERSION = "000"
+
+COMPILER_DEBUG = False

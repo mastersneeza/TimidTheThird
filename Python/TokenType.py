@@ -24,6 +24,7 @@ T_WHILE = iota()
 T_FOR = iota()
 T_FOREVER = iota()
 T_BREAK = iota()
+T_CONTINUE = iota()
 
 ### Arithmetic ###
 T_PLUS = iota(True, 40)
