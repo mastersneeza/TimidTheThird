@@ -126,8 +126,6 @@ class Parser:
             return ForeverStmt(kw, body)
         if self.match(T_FOR): return self.for_stmt(nullable)
         if self.match(T_IF): return self.if_stmt(nullable)
-        if self.match(T_ELSE):
-            raise self.error(self.previous_tok, "'else' block outside of 'if' block")
         if self.match(T_PRINT): return self.print_stmt(nullable)
         if self.match(T_LCURL): return self.block(nullable)
         if self.match(T_ASSERT):

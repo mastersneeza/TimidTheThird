@@ -120,16 +120,19 @@ bool subscriptValue(Value iterable, Value subscript, Value* vaPtr) {
         ObjString* string = AS_STRING(iterable);
         int index = AS_INT(subscript);
 
-        if (index >= string->length) // Check if index is in bounds
-            return false;
+        //while (index >= string->length)
+        //    index -= string->length;
 
         while (index < 0) // If negative index, wrap around until positive
             index += string->length;
 
-        char* buffer = ALLOCATE(char, 1); // Allocate buffer
+        char* buffer = ALLOCATE(char, 1);
 
-        buffer[0] = string->chars[index];
-        string = makeString(true, buffer, 1); // New buffer means char is owned
+        if (index >= string->length)
+            buffer[0] = '\r';
+        else
+            buffer[0] = string->chars[index];
+        string = makeString(true, buffer, 1); // New buffer means char is owned and will be freed with the object
 
         *vaPtr = TIMID_STR_2_VAL(string);
         return true;

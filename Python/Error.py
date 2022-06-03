@@ -1,3 +1,4 @@
+import pathlib
 import sys
 
 from Runtime import RuntimeError
@@ -34,6 +35,11 @@ class ErrorReporter: # To report errors
             if idx_end < 0: idx_end = len(text)
 
         return result.replace('\t', '')
+
+    @staticmethod
+    def file_not_found(path : pathlib.Path):
+        sys.stderr.write("File not found error: \n")
+        sys.stderr.write(f"\tFile {path.absolute()} could not be found")
 
     @staticmethod
     def invalid_character(pos_start : Position, pos_end : Position, message : str): # Lexer

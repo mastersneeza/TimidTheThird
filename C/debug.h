@@ -5,7 +5,7 @@
 
 #ifdef T_DBG
 #define T_MEM_DB
-#define T_VM_DB
+#define T_VM_DBG
 #define T_STACK_DB
 #define T_TABLE_DB
 #define T_VAL_DB

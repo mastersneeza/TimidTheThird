@@ -23,6 +23,10 @@ I NEED TESTERS THAT CAN FIND CRASHES (see Development)
 
 ## What's new (no one asked)
 
+- Clean up command line interface, though it requires some more work
+- Fix ```else if``` syntax
+- Fix ```for``` statement in terms of leaving values on stack
+- Expose null terminator string
 - Fix floating point error for exponentiation (e.g. ```a ^ b```)
 - Added ```continue``` statement
 - Optimize strings using string interning

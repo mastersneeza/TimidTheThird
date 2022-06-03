@@ -1,3 +1,4 @@
+import pathlib
 from Enum import iota
 from Error import ErrorReporter
 from Nodes import *
@@ -124,24 +125,24 @@ class Chunk:
         self.constants.append(value)
         return self.constant_count - 1 # Return the index of the appended value
 
-    def dump(self, bytecode : bytes):
+    def dump(self, bytecode : bytes, debug):
         i = 0
         for byte in bytecode:
-            clog(hex(byte)[2:].rjust(2, '0'), end = ' ')
+            clog(hex(byte)[2:].rjust(2, '0'), end = ' ', debug = debug)
 
             if i >= 7:
-                clog()
+                clog("", debug = debug)
                 i = 0
                 continue
             i += 1
-        clog("\n")
+        clog("\n", debug = debug)
 
-def clog(message, end = '\n'): # Prints only if debug is enabled
-    if COMPILER_DEBUG:
+def clog(message, end = '\n', debug = False): # Prints only if debug is enabled
+    if debug:
         print(message, end = end)
     
 class Compiler(Visitor):
-    def __init__(self, statements : list[Stmt]):
+    def __init__(self, statements : list[Stmt], debug = False):
         self.statements = statements
         self._chunk = Chunk()
 
@@ -161,6 +162,8 @@ class Compiler(Visitor):
 
         self.continue_type = OP_LOOP # Because continue in for loops can jump either forwards or backwards, but typically it jumps back to the top
 
+        self.debug = debug
+
     @property
     def chunk(self): return self._chunk
 
@@ -172,7 +175,7 @@ class Compiler(Visitor):
         self.scope_depth -= 1
 
         while self.local_count > 0 and self.locals[self.local_count - 1]["depth"] > self.scope_depth: # Pop all the locals at the end of the scope
-            clog("End scope pop")
+            clog("End scope pop", debug = self.debug)
             self.chunk.emit_pop()
             self.local_count -= 1
 
@@ -258,7 +261,7 @@ class Compiler(Visitor):
         with open(path, "wb") as f:
            f.write(bytes(bytecode))
 
-    def dump(self): self.chunk.dump(self.chunk.as_bytes)
+    def dump(self): self.chunk.dump(self.chunk.as_bytes, self.debug)
 
     def compile(self, path : str):
         self.chunk.emit_header()
@@ -268,6 +271,8 @@ class Compiler(Visitor):
         self.chunk.emit_end()
 
         if ErrorReporter.HAD_ERROR: return
+
+        self.dump()
 
         self.write(path)
         assert not COMPILER_DEBUG, "Still in debug mode"
@@ -367,7 +372,7 @@ class Compiler(Visitor):
 
     def visitExprStmt(self, stmt: ExprStmt):
         self.visit(stmt.expr)
-        clog("Expr pop")
+        clog("Expr pop", debug = self.debug)
         self.chunk.emit_pop()
 
     def visitForStmt(self, stmt: ForStmt):
@@ -386,7 +391,7 @@ class Compiler(Visitor):
             self.visit(stmt.condition)
 
             exit_jump = self.chunk.emit_jump(OP_JUMP_IF_FLS)
-            clog("For stmt condition pop")
+            clog("For stmt condition pop", debug = self.debug)
             self.chunk.emit_pop()
 
         self.begin_scope()
@@ -398,9 +403,10 @@ class Compiler(Visitor):
         if stmt.step != None:
             continue_pos = self.chunk.code_length # If there is a step the VM needs to know where to go for the step in the case of a continue
             self.visit(stmt.step)
+            self.chunk.emit_pop()
         
         self.chunk.emit_loop(stmt.body, self.inner_loop_start)
-        
+
         if exit_jump != -1:
             self.chunk.patch_jump(stmt, exit_jump)
             clog("For stmt exit pop")
@@ -437,7 +443,7 @@ class Compiler(Visitor):
         self.visit(stmt.condition)
 
         then_jump = self.chunk.emit_jump(OP_JUMP_IF_FLS)
-        clog("If stmt if clause pop")
+        clog("If stmt if clause pop", debug = self.debug)
         self.chunk.emit_pop()
 
         self.visit(stmt.if_branch)
@@ -445,7 +451,7 @@ class Compiler(Visitor):
         else_jump = self.chunk.emit_jump(OP_JUMP)
 
         self.chunk.patch_jump(stmt.if_branch, then_jump)
-        clog("If stmt else clause pop")
+        clog("If stmt else clause pop", debug = self.debug)
         self.chunk.emit_pop()
 
         if stmt.else_branch != None:
@@ -472,7 +478,7 @@ class Compiler(Visitor):
         self.visit(stmt.condition)
 
         exit_jump = self.chunk.emit_jump(OP_JUMP_IF_FLS)
-        clog("While stmt condition pop")
+        clog("While stmt condition pop", debug = self.debug)
         self.chunk.emit_pop()
 
         self.begin_scope()
@@ -484,7 +490,7 @@ class Compiler(Visitor):
         self.chunk.emit_loop(stmt.body, self.inner_loop_start)
 
         self.chunk.patch_jump(stmt, exit_jump)
-        clog("While stmt exit pop")
+        clog("While stmt exit pop", debug = self.debug)
         self.chunk.emit_pop()
 
         previous_end = self.end_loop()

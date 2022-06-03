@@ -132,7 +132,7 @@ static void readBytecode(uint8_t* bytecode, size_t bytecodeLength) {
                 addConstant(vm.block, TIMID_FLOAT(u.f));
                 break;
             }
-            case B_STRING: {
+            case B_STRING: { // Include null terminator
                 int len = 0;
 
                 // Read string length
@@ -507,10 +507,9 @@ static InterpretResult run() {
                 char* buffer = ALLOCATE(char, bufferSize);
 
                 size_t size = getline(&buffer, &bufferSize, stdin) - 1;
+                //buffer[size] = '\0';
                 push(TIMID_STRING(buffer, size));
                 break;
-                
-                
             }
             case OP_SUBSCRIPT: {
                 Value subscript = pop();

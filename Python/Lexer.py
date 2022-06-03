@@ -15,7 +15,10 @@ ESCAPE_CHARS = {
     '\'': '\'',
     '\\': '\\',
     'n': '\n',
-    't': '\t'
+    't': '\t',
+    '0': '\r',
+    'r': '\r',
+    'a': '\a'
 }
 
 KEYWORDS = {
@@ -186,7 +189,7 @@ class Lexer:
             case ':': self.single_char_token(T_COLON)
             case ';': self.single_char_token(T_SEMIC)
             case '$': self.single_char_token(T_DOLLAR)
-            case '\0': self.single_char_token(T_EOF)
+            #case '\0': self.single_char_token(T_EOF)
 
             case '|': self.two_char_token(T_BWOR, T_ASSERT, '-')
 
