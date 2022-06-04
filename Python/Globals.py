@@ -1,3 +1,3 @@
-VERSION = "001"
+VERSION = "002"
 
 COMPILER_DEBUG = False

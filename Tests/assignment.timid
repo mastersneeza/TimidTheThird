@@ -1,0 +1,22 @@
+$a = 2
+print a
+
+a += 2
+print a
+
+a *= "amongus "
+print a
+
+$b = 0
+print b
+
+b += 7
+b *= 6
+print b
+
+b /= 44
+print b
+
+b *= b += 3
+
+print b

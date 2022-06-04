@@ -1,19 +1,60 @@
-for                 ->  'for' IDENTIFIER '=' expr ',' 
+program         ->      declaration*    ;
 
+declaration     ->      '$' IDENTIFIER ( '=' expr )?
+                    |   statement   ;
 
+statement       ->      '|-' expr expr? 
+                    |   '{' declaration* '}'
+                    |   'break' | 'continue'
+                    |   expr
+                    |   'for' declaration? ',' expr? ',' expr? statement
+                    |   'forever' statement
+                    |   'goto' IDENTIFIER
+                    |   'if' expr statement ( 'else' statement )?
+                    |   'print' expr?
+                    |   'while' expr statement  ;
 
+expr            ->  assignment  ;
 
-for i 0 {
+assignment      ->  ternary ( ( '=' | '+=' | '-=' | '*=' | '/=' | '%=' | '^=' ) assignment )?   ;
 
-}
+ternary         ->  or_expr ( '?' expr ':' expr )?  ;
 
-for i 0 -> 10 {
+or_expr         ->  and_expr ( 'or' and_expr )*    ;
 
-}
+and_expr        ->  equality ( 'and' equality )*   ;
 
-for i = 0 -> 10 -> 2 {
+equality        -> comparison ( ( '==' | '!=' ) comparison )*    ;
 
-}
+comparison      -> sum  ( ( '<' | '<=' | '>' | '>=' ) sum )*   ;
 
+sum             -> term ( ( '+' | '-' ) term )*    ;
 
-for i=0; i < 10; i = i + 2
+term            -> unary ( ( '*' | '/' | '%' ) unary)*  ;
+
+unary           -> ( '-' | '+' | '!' ) unary
+                |   power   ;
+
+power           -> factorial ( '^' unary)*   ;
+
+factorial       -> call '!'*    ;
+
+call            -> atom ( ( '[' expr ']' ) )* ;
+
+atom            -> '(' expr ')'
+                |   'in' expr?
+                |   INT
+                |   FLOAT
+                |   STRING
+                |   'tru'
+                |   'fls'
+                |   'nul'
+                |   IDENTIFIER ':'?
+
+FLOAT           -> INT '.' INT  ;
+
+INT             -> [0-9]+   ;
+
+IDENTIFIER      -> [A-Za-z_][A-Za-z0-9_]*   ;
+
+STRING          -> ('"' | ''') (any ascii character including escape)* ('"' | ''')  ;

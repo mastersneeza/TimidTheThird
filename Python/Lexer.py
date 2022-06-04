@@ -164,12 +164,12 @@ class Lexer:
     def scan_token(self):
         self.skip_whitespace()
         match self.current_char:
-            case '+': self.single_char_token(T_PLUS)
-            case '-': self.two_char_token(T_MINUS, T_ARROW, '>')
-            case '*': self.single_char_token(T_STAR)
-            case '/': self.single_char_token(T_SLASH)
-            case '%': self.single_char_token(T_PERCENT)
-            case '^': self.single_char_token(T_CARET)
+            case '+': self.two_char_token(T_PLUS, T_PLUS_ASSIGN, '=')
+            case '-': self.two_char_token(T_MINUS, T_MINUS_ASSIGN, '=')
+            case '*': self.two_char_token(T_STAR, T_STAR_ASSIGN, '=')
+            case '/': self.two_char_token(T_SLASH, T_SLASH_ASSIGN, '=')
+            case '%': self.two_char_token(T_PERCENT, T_PERCENT_ASSIGN, '=')
+            case '^': self.two_char_token(T_CARET, T_CARET_ASSIGN, '=')
 
             case '=': self.two_char_token(T_EQ, T_EE, '=')
             case '!': self.two_char_token(T_NOT, T_NE, '=')
@@ -190,7 +190,7 @@ class Lexer:
             case ':': self.single_char_token(T_COLON)
             case ';': self.single_char_token(T_SEMIC)
             case '$': self.single_char_token(T_DOLLAR)
-            #case '\0': self.single_char_token(T_EOF)
+            case '\0': self.single_char_token(T_EOF)
 
             case '|': self.two_char_token(T_BWOR, T_ASSERT, '-')
 

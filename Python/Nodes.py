@@ -18,9 +18,10 @@ class SubscriptExpr(Expr):
         return visitor.visitSubscriptExpr(self)
 
 class AssignExpr(Expr):
-    def __init__(self, name : Token, value : Expr):
+    def __init__(self, name : Token, value : Expr, operand : Token):
         self.name = name
         self.value = value
+        self.operand = operand
         super().__init__(name.pos_start, value.pos_end)
     def accept(self, visitor):
         return visitor.visitAssignExpr(self)
@@ -229,7 +230,6 @@ class VarDeclStmt(Stmt):
 
 ### Visitor ###
 class Visitor:
-    def visitSubscriptExpr(self, expr : SubscriptExpr): pass
     def visitAssignExpr(self, expr : AssignExpr): pass
     def visitBinaryExpr(self, expr : BinaryExpr): pass
     def visitCallExpr(self, expr : CallExpr): pass
@@ -238,6 +238,7 @@ class Visitor:
     def visitInputExpr(self, expr : InputExpr): pass
     def visitLambdaExpr(self, expr : LambdaExpr): pass
     def visitLiteralExpr(self, expr : LiteralExpr): pass
+    def visitSubscriptExpr(self, expr : SubscriptExpr): pass
     def visitTernaryExpr(self, expr : TernaryExpr): pass
     def visitUnaryExpr(self, expr : UnaryExpr): pass
     def visitVariableExpr(self, expr : VariableExpr): pass

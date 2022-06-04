@@ -562,8 +562,21 @@ class Compiler(Visitor):
     ### Expressions ###
 
     def visitAssignExpr(self, expr: AssignExpr):
-        self.visit(expr.value)
-        self.named_variable(expr.name, True)
+        op = expr.operand.type
+
+        if op != T_EQ: # If it is a modified assignment then push the values the other way around
+            self.named_variable(expr.name) # Add variable to stack to operate on
+            self.visit(expr.value) # Add value to stack
+            if op == T_PLUS_ASSIGN: self.chunk.emit_byte(OP_ADD)
+            if op == T_MINUS_ASSIGN: self.chunk.emit_byte(OP_SUB)
+            if op == T_STAR_ASSIGN: self.chunk.emit_byte(OP_MUL)
+            if op == T_SLASH_ASSIGN: self.chunk.emit_byte(OP_DIV)
+            if op == T_PERCENT_ASSIGN: self.chunk.emit_byte(OP_MOD)
+            if op == T_CARET_ASSIGN: self.chunk.emit_byte(OP_POW)
+        else:
+            self.visit(expr.value)
+
+        self.named_variable(expr.name, True) # Assign
 
     def visitBinaryExpr(self, expr: BinaryExpr):
         self.visit(expr.left)

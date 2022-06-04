@@ -62,8 +62,6 @@ t_int toInt(Value value) {
             return (t_int)AS_FLOAT(value);
         case V_BOOL:
             return (t_int)AS_BOOL(value);
-        case V_NULL:
-            return 0;
     }
 }
 
@@ -75,8 +73,6 @@ t_float toFloat(Value value) {
             return AS_FLOAT(value);
         case V_BOOL:
             return (t_float)AS_BOOL(value);
-        case V_NULL:
-            return (t_float)0;
     }
 }
 
@@ -163,7 +159,7 @@ bool isNumeric(Value value) {
 }
 
 bool isIntegral(Value value) {
-    return value.type == V_INT || value.type == V_BOOL || value.type == V_NULL;
+    return value.type == V_INT || value.type == V_BOOL;
 }
 
 bool equals(Value a, Value b) {

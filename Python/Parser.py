@@ -230,9 +230,28 @@ class Parser:
 
     def expr(self, nullable = False):
         return self.ternary(nullable)
-    
+
+    def assignment(self, nullable = False):
+        expr = self.ternary(nullable)
+        if self.match(T_EQ, T_PLUS_ASSIGN, T_MINUS_ASSIGN, T_STAR_ASSIGN, T_SLASH_ASSIGN, T_PERCENT_ASSIGN, T_CARET_ASSIGN):
+            operand = self.previous_tok
+            invalid = False
+            value = self.assignment(True)
+
+            if (not isinstance(expr, VariableExpr)):
+                self.error(expr, "Invalid assignment target")
+                invalid = True
+
+            if value == None:
+                raise self.error(self.current_tok, f"Expected an assignment value (after '{self.previous_tok.lexeme}')")
+
+            if not invalid:
+                return AssignExpr(expr.name, value, operand)
+
+        return expr
+
     def ternary(self, nullable = False):
-        condition = self.assignment(nullable)
+        condition = self.lambda_expr(nullable)
 
         if self.match(T_QMARK):
             if_branch = self.expr(True)
@@ -249,24 +268,6 @@ class Parser:
 
             return TernaryExpr(condition, if_branch, else_branch)
         return condition
-
-    def assignment(self, nullable = False):
-        expr = self.lambda_expr(nullable)
-        if self.match(T_EQ):
-            invalid = False
-            value = self.assignment(True)
-
-            if (not isinstance(expr, VariableExpr)):
-                self.error(expr, "Invalid assignment target")
-                invalid = True
-
-            if value == None:
-                raise self.error(self.current_tok, f"Expected an assignment value (after '{self.previous_tok.lexeme}')")
-
-            if not invalid:
-                return AssignExpr(expr.name, value)
-
-        return expr
 
     def lambda_expr(self, nullable = False):
         if self.match(T_LAMBDA):

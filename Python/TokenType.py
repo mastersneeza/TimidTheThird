@@ -34,6 +34,13 @@ T_SLASH = iota()
 T_PERCENT = iota()
 T_CARET = iota()
 
+T_PLUS_ASSIGN = iota()
+T_MINUS_ASSIGN = iota()
+T_STAR_ASSIGN = iota()
+T_SLASH_ASSIGN = iota()
+T_PERCENT_ASSIGN = iota()
+T_CARET_ASSIGN = iota()
+
 ### Boolean ###
 T_EQ = iota()
 T_EE = iota()

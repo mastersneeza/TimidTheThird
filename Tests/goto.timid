@@ -1,0 +1,71 @@
+# Str to int but with goto to emulate functions
+
+$ returnVal = 0
+
+$num = ""
+
+main:
+    forever {
+        num = in "Enter a number to convert to an integer: "
+        goto strToInt # Call the strToInt function
+        call: # Return
+            print num
+            print "Your number doubled is " + returnVal * 2
+            print "Your number halved is " + returnVal / 2
+            continue
+        error:
+            break
+    }
+    goto end
+
+strToInt:
+    $ c  # Current char
+    $ result = 0 
+    $ n = 0
+
+    $ len = 0
+
+    $ error = fls
+
+    forever { # Get the length of string
+        if num[len] == "\0" {
+            break
+        }
+        len = len + 1
+    }
+
+    for $index = 0, index < len, index = index + 1 {
+        c = num[-1 - index] # Walk backwards
+        if c == '0'
+            n = 0
+        else if c == '1'
+            n = 1
+        else if c == '2'
+            n = 2
+        else if c == '3'
+            n = 3
+        else if c == '4'
+            n = 4
+        else if c == '5'
+            n = 5
+        else if c == '6'
+            n = 6
+        else if c == '7'
+            n = 7
+        else if c == '8'
+            n = 8
+        else if c == '9'
+            n = 9
+        else {
+            print "Invalid character '" + c + "'"
+            goto error
+        }
+        $ exponent = 10 ^ index
+        $ newPlace = n * exponent
+        result = result + newPlace
+    }
+
+    returnVal = result # Set return value
+goto call
+
+end:
