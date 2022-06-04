@@ -134,6 +134,14 @@ class Parser:
             message = self.expr(True)
             
             return AssertStmt(kw, condition, message)
+        if self.check(T_IDENTIFIER) and self.next_tok.type == T_COLON:
+            name = self.advance()
+            self.advance() # Consume colon
+
+            return Label(name)
+        if self.match(T_GOTO):
+            label = self.consume("Expected a label", T_IDENTIFIER)
+            return GotoStmt(label)
         if self.match(T_BREAK): return BreakStmt(self.previous_tok)
         if self.match(T_CONTINUE): return ContinueStmt(self.previous_tok)
         return self.expr_stmt(nullable)
@@ -315,7 +323,10 @@ class Parser:
             prompt = self.expr(True) # There may not be a prompt
             return InputExpr(prompt, kw)
         if self.match(T_INT, T_FLOAT, T_STRING, T_TRUE, T_FALSE, T_NULL): return LiteralExpr(self.previous_tok)
-        if self.match(T_IDENTIFIER): return VariableExpr(self.previous_tok)
+        if self.match(T_IDENTIFIER):
+            if self.match(T_COLON):
+                raise self.error(self.previous_tok, "Goto label in expression")
+            return VariableExpr(self.previous_tok)
         if self.match(T_LPAR):
             self.nest_depth += 1
             if self.nest_depth >= MAX_NEST_DEPTH:

@@ -7,6 +7,9 @@ class Interpreter(Visitor): # TODO: organize REPL runtime
     def __init__(self):
         self.globals = Environment()
         self.environment = self.globals
+        self.statements = []
+        self.current_stmt = None
+        self.labels : dict[str, int] = {}
 
         self.should_break = False
         self.should_continue = False
@@ -14,8 +17,10 @@ class Interpreter(Visitor): # TODO: organize REPL runtime
         self.globals.define("Clock", Clock())
 
     def interpret(self, statements : list[Stmt]):
+        self.statements = statements
         try:
-            for stmt in statements:
+            for stmt in self.statements:
+                self.current_stmt = stmt
                 self.execute(stmt)
         except (RuntimeError, TypeError) as e:
             ErrorReporter.runtime_error(e)
@@ -86,6 +91,19 @@ class Interpreter(Visitor): # TODO: organize REPL runtime
                 continue
         self.should_break = False
         self.should_continue = False
+
+    def visitLabel(self, label: Label):
+        self.labels[label.label.lexeme] = self.statements.index(self.current_stmt) + 1
+
+    def visitGotoStmt(self, stmt: GotoStmt):
+        label = stmt.label.lexeme
+
+        if label not in self.labels:
+            raise RuntimeError(stmt.label.pos_start, stmt.label.pos_end, f"Label '{label}' is not defined")
+
+        index = self.labels[label]
+
+        self.execute(self.statements[index])
 
     def visitWhileStmt(self, stmt: WhileStmt):
         while self.evaluate(stmt.condition):

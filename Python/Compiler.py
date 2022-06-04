@@ -157,8 +157,12 @@ class Compiler(Visitor):
 
         self.inner_loop_start = -1
         self.inner_loop_end = -1
+        self.inner_loop_scope_depth = 0
         self.breaking = False
         self.continuing = False
+        
+        self.label_addrs : dict[str, int] = {}
+        self.gotos : list[tuple[str, int]] = [] # List of gotos that require patching using their index in the code
 
         self.continue_type = OP_LOOP # Because continue in for loops can jump either forwards or backwards, but typically it jumps back to the top
 
@@ -274,6 +278,11 @@ class Compiler(Visitor):
 
         self.dump()
 
+        if len(self.gotos) > 0: # If we still have gotos that require patching then raise error
+            # TODO: track the corresponding goto
+            ErrorReporter.compile_error(self.statements[-1], "Unmatched goto")
+            return
+
         self.write(path)
         assert not COMPILER_DEBUG, "Still in debug mode"
 
@@ -332,12 +341,25 @@ class Compiler(Visitor):
             self.chunk.code[self.continue_position + 1] = (jump_distance >> 8) & 0xff
             self.continuing = False # Turn of toggle to prevent overwriting the instruction
 
+    def patch_goto(self, stmt : Stmt, label_addr : int, goto_addr : int):
+        distance = label_addr - goto_addr - 2 # Get distance between goto instruction index and label index
+
+        if distance < 0:
+            self.chunk.code[goto_addr - 1] = OP_LOOP # If the size is negative then we jump backwards using the loop instruction
+            distance *= -1 # Make distance positive
+
+        if distance > 2**16 - 1:
+            ErrorReporter.compile_error(stmt, "Too much code to jump")
+
+        self.chunk.code[goto_addr] = distance & 0xff
+        self.chunk.code[goto_addr + 1] = (distance >> 8) & 0xff
+        
     ### Return the original position
 
     def begin_loop(self):
-        previous = self.inner_loop_start
+        previous_start = self.inner_loop_start
         self.inner_loop_start = self.chunk.code_length
-        return previous
+        return previous_start
 
     def end_loop(self):
         previous = self.inner_loop_end
@@ -361,12 +383,18 @@ class Compiler(Visitor):
     def visitBreakStmt(self, stmt: BreakStmt):
         if self.inner_loop_start == -1:
             ErrorReporter.compile_error(stmt, "Break statement outside of loop")
+        for i in range(self.local_count - 1, -1, -1): # Discard loop locals
+            if self.locals[i]["depth"] <= self.scope_depth: break
+            self.chunk.emit_pop()
         self.break_position = self.chunk.emit_jump(OP_JUMP)
         self.breaking = True # Set to true to allow for patching
 
     def visitContinueStmt(self, stmt: ContinueStmt):
         if self.inner_loop_start == -1:
             ErrorReporter.compile_error(stmt, "Continue statement outside of loop")
+        for i in range(self.local_count - 1, -1, -1):
+            if self.locals[i]["depth"] <= self.scope_depth: break
+            self.chunk.emit_pop()
         self.continue_position = self.chunk.emit_jump(self.continue_type)
         self.continuing = True
 
@@ -384,6 +412,7 @@ class Compiler(Visitor):
             self.continue_type = OP_JUMP
 
         previous_start = self.begin_loop()
+        previous_depth = self.scope_depth
 
         exit_jump = -1
 
@@ -420,11 +449,13 @@ class Compiler(Visitor):
         self.patch_continue(stmt, continue_pos)
 
         self.exit_loop(previous_start, previous_end)
+        self.scope_depth = previous_depth
 
         self.continue_type = previous_continue_type
 
     def visitForeverStmt(self, stmt: ForeverStmt):
         previous_start = self.begin_loop()
+        previous_depth = self.scope_depth
 
         self.begin_scope()
         self.visit(stmt.body) # Compile body
@@ -438,6 +469,22 @@ class Compiler(Visitor):
         self.patch_continue(stmt)
 
         self.exit_loop(previous_start, previous_end)
+        self.scope_depth = previous_depth
+
+    def visitGotoStmt(self, stmt: GotoStmt):
+        label = stmt.label.lexeme
+
+        for i in range(self.local_count - 1, -1, -1):
+            if self.locals[i]["depth"] <= self.scope_depth: break
+            clog("Local pop", end = COMPILER_DEBUG)
+            self.chunk.emit_pop()
+
+        if label in self.label_addrs: # If the address of the label has already been compiled
+            goto_addr = self.chunk.emit_jump(OP_JUMP)
+            self.patch_goto(stmt, self.label_addrs[label], goto_addr) # Patch the goto immeditately
+        else:
+            goto = (label, self.chunk.emit_jump(OP_JUMP))
+            self.gotos.append(goto) # Add the label to the gotos requiring patching
 
     def visitIfStmt(self, stmt: IfStmt):
         self.visit(stmt.condition)
@@ -459,6 +506,16 @@ class Compiler(Visitor):
 
         self.chunk.patch_jump(stmt.if_branch if stmt.else_branch == None else stmt.else_branch, else_jump)
 
+    def visitLabel(self, label: Label):
+        name = label.label.lexeme
+        if name in self.label_addrs: # No duplicate labels are allowed
+            ErrorReporter.compile_error(label, f"Label '{name}' has previously been defined")
+        self.label_addrs[name] = self.chunk.code_length # Set the jump address
+        for goto in self.gotos: # Search for any gotos that require patching
+            if goto[0] == name:
+                self.patch_goto(label, self.chunk.code_length, goto[1])
+                self.gotos.remove(goto)
+
     def visitPrintStmt(self, stmt: PrintStmt):
         if stmt.value == None: self.emit_empty_str()
         else: self.visit(stmt.value)
@@ -474,6 +531,7 @@ class Compiler(Visitor):
 
     def visitWhileStmt(self, stmt: WhileStmt):
         previous_start = self.begin_loop()
+        previous_scope = self.scope_depth
 
         self.visit(stmt.condition)
 
@@ -499,6 +557,7 @@ class Compiler(Visitor):
         self.patch_continue(stmt)
 
         self.exit_loop(previous_start, previous_end)
+        self.scope_depth = previous_scope
 
     ### Expressions ###
 

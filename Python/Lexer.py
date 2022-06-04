@@ -38,7 +38,8 @@ KEYWORDS = {
     'for': T_FOR,
     'forever': T_FOREVER,
     'break': T_BREAK,
-    'continue': T_CONTINUE
+    'continue': T_CONTINUE,
+    'goto': T_GOTO
 }
 
 class Lexer:

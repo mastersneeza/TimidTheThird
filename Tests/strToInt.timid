@@ -38,9 +38,10 @@ for $index = 0, index < len, index = index + 1 {
         n = 8
     else if c == '9'
         n = 9
-    else
+    else {
         print "Invalid character '" + c + "'"
         break
+    }
     $ exponent = 10 ^ index
     $ newPlace = n * exponent
     result = result + newPlace

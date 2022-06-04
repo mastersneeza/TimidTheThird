@@ -352,19 +352,12 @@ static InterpretResult run() {
                 if (isNumeric(peek(0)) && isNumeric(peek(1))) {
                     Value b = pop(), a = pop();
                     
-                    if (a.type == V_FLOAT || b.type == V_FLOAT) {
+                    if (isNumeric(a) && isNumeric(b)) {
                         if (toFloat(b) == 0) {
                             printf("Division by zero\n");
                             return INTERPRET_RUNTIME_ERROR;
                         } 
                         push(TIMID_FLOAT(toFloat(a) / toFloat(b)));
-                    }
-                    else {
-                        if (toInt(b) == 0) {
-                            printf("Division by zero\n");
-                            return INTERPRET_RUNTIME_ERROR;
-                        } 
-                        push(TIMID_INT(toInt(a) / toInt(b)));
                     }
                     break;
                 }
@@ -374,20 +367,22 @@ static InterpretResult run() {
             case OP_MOD: {
                 if (isNumeric(peek(0)) && isNumeric(peek(1))) {
                     Value b = pop(), a = pop();
-                    
-                    if (a.type == V_FLOAT || b.type == V_FLOAT) {
-                        if (toFloat(b) == 0) {
-                            printf("Division by zero\n");
-                            return INTERPRET_RUNTIME_ERROR;
-                        } 
-                        push(TIMID_FLOAT((t_float)fmod(toFloat(a), toFloat(b))));
-                    }
-                    else {
+
+                    if (IS_INT(a) && IS_INT(b)) {
                         if (toInt(b) == 0) {
-                            printf("Division by zero\n");
+                            printf("Modulus by zero\n");
                             return INTERPRET_RUNTIME_ERROR;
                         } 
                         push(TIMID_INT(toInt(a) % toInt(b)));
+                        break;
+                    }
+                    
+                    if (isNumeric(a) && isNumeric(b)) {
+                        if (toFloat(b) == 0) {
+                            printf("Modulus by zero\n");
+                            return INTERPRET_RUNTIME_ERROR;
+                        } 
+                        push(TIMID_FLOAT((t_float)fmod(toFloat(a), toFloat(b))));
                     }
                     break;
                 }

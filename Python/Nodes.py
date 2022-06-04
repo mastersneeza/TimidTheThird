@@ -179,6 +179,12 @@ class ForeverStmt(Stmt):
         super().__init__(kw.pos_start, body.pos_end)
     def accept(self, visitor): visitor.visitForeverStmt(self)
 
+class GotoStmt(Stmt):
+    def __init__(self, label : Token):
+        self.label = label
+        super().__init__(label.pos_start, label.pos_end)
+    def accept(self, visitor): visitor.visitGotoStmt(self)
+
 class IfStmt(Stmt):
     def __init__(self, condition : Expr, if_branch : Stmt, else_branch : Stmt = None):
         self.condition = condition
@@ -187,6 +193,12 @@ class IfStmt(Stmt):
         super().__init__(condition.pos_start, if_branch.pos_end if else_branch == None else else_branch.pos_end)
     def accept(self, visitor): visitor.visitIfStmt(self)
     def __repr__(self): return f"(if {self.condition} do {self.if_branch} else {self.else_branch})"
+
+class Label(Stmt):
+    def __init__(self, label : Token):
+        self.label = label
+        super().__init__(label.pos_start, label.pos_end)
+    def accept(self, visitor): visitor.visitLabel(self)
 
 class PrintStmt(Stmt):
     def __init__(self, kw : Token, value : Expr):
@@ -237,7 +249,9 @@ class Visitor:
     def visitExprStmt(self, stmt : ExprStmt): pass
     def visitForStmt(self, stmt : ForStmt): pass
     def visitForeverStmt(self, stmt : ForeverStmt): pass
+    def visitGotoStmt(self, stmt : GotoStmt): pass
     def visitIfStmt(self, stmt : IfStmt): pass
+    def visitLabel(self, label : Label): pass
     def visitPrintStmt(self, stmt : PrintStmt): pass
     def visitVarDeclStmt(self, stmt : VarDeclStmt): pass
     def visitWhileStmt(self, stmt : WhileStmt): pass
