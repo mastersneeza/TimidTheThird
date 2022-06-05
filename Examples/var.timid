@@ -1,0 +1,3 @@
+$ name = "Amongus"
+
+print "My name is " + name

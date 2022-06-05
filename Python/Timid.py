@@ -20,7 +20,8 @@ class Timid:
     def init():
         args = sys.argv[1:]
         if len(args) < 1:
-            Timid.run_repl()
+            Timid.show_usage()
+            sys.exit(64)
         else:
             Timid.run_files(Timid.get_args(args))
 
@@ -45,7 +46,7 @@ class Timid:
             options, files = getopt.getopt(args, 'cdhv', ["compile", "dev", "help", "version"])
         except getopt.GetoptError as e:
             Timid.show_usage()
-            sys.exit(1)
+            sys.exit(64)
 
         for option, arg in options:
             match option:
@@ -67,10 +68,18 @@ class Timid:
         for file in files:
             path = pathlib.Path(file)
 
-            Timid.compile_file(path)
+            binary_path = Timid.compile_file(path)
+
+            if Timid.COMPILE_ONLY: continue
+
+            # Run the binary
+            args = [".%sTimidRuntime" % '\\' if os.name == 'nt' else '/']
+            args.append(binary_path)
+
+            subprocess.run(args)
 
     @staticmethod
-    def read_file(path : pathlib.Path):
+    def read_file(path : pathlib.Path): # Get the source
         if path.exists():
             with path.open('r') as f:
                 source = f.read()
@@ -99,20 +108,23 @@ class Timid:
     def compile_file(path : pathlib.Path):
         tokens = Timid.lex(path)
 
-        if ErrorReporter.HAD_ERROR:
-            return False
+        if ErrorReporter.HAD_ERROR: return False
 
         statements = Timid.parse(tokens)
 
-        if ErrorReporter.HAD_ERROR:
-            return False
+        if ErrorReporter.HAD_ERROR: return False
 
         compiler = Compiler(statements, Timid.COMPILER_DEBUG)
 
+        # Get the output file name
         binary_name = path.stem + ".timb"
         binary_path = path.absolute().parent / binary_name
 
         compiler.compile(binary_path)
+
+        ErrorReporter.HAD_ERROR = False # Reset flag
+
+        return binary_path
 
     @staticmethod
     def run(source : str, path : str):

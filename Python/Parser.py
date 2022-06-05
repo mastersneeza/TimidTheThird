@@ -71,7 +71,7 @@ class Parser:
 
             tok_type = self.current_tok.type
 
-            if tok_type in (T_LAMBDA, T_CONST, T_PRINT, T_IF, T_WHILE, T_DOLLAR, T_LCURL, T_ASSERT, T_FOR):
+            if tok_type in (T_LAMBDA, T_CONST, T_PRINT, T_IF, T_WHILE, T_DOLLAR, T_LCURL, T_ASSERT, T_FOR, T_FOREVER, T_GOTO):
                 return
 
             self.advance()
@@ -229,7 +229,7 @@ class Parser:
     # Expressions
 
     def expr(self, nullable = False):
-        return self.ternary(nullable)
+        return self.assignment(nullable)
 
     def assignment(self, nullable = False):
         expr = self.ternary(nullable)

@@ -24,6 +24,9 @@ I NEED TESTERS THAT CAN FIND CRASHES (see Development)
 
 ## What's new (no one asked)
 
+- Remove REPL (for now because screw the REPL)
+- Automatic code execution after compilation
+- Fixed assignment expressions
 - Added syntax to ```syntax.txt``` for people who don't know Timid
 - Move some files around
 - Add special assignment operators ```+=```, ```-=```, ```*=```, ```/=```, ```%=```, ```^=```)
@@ -54,16 +57,13 @@ I NEED TESTERS THAT CAN FIND CRASHES (see Development)
 - Simple types (int, float, bool, string, null)
 - Block syntax and some scoping (```{}``` to surround statements)
 - Control flow (```if```, ```while```, ```for```, ```forever```, ```break```, ```continue```)
-- Assertions (```|- condition error_msg```) (only in the Python version because I cant do C)
-- That's it (what???)
 
 ## Coming soon (or maybe never)
 
-- Automatic code running after compilation
 - More restriction on types
 - Functions and lambdas (once I figure out how to represent them in bytecode)
 - Classes and other OOP (going to be copypasted from Crafting Interpreters)
-- Better error handling and static analysis (```try``` and ```catch``` blocks, user-accesible exceptions)
+- Better error handling and static analysis (```try``` and ```catch``` blocks, assertions ```|-```, user-accesible exceptions)
 - More tests
 - More static analysis
 - String functions (sorting, searching, slicing)
@@ -74,14 +74,13 @@ I NEED TESTERS THAT CAN FIND CRASHES (see Development)
 - A comprehensive guide to Timid
 - Coroutines
 - Networking
-- Graphics library (what to use???)
+- Graphics library (what to use??? OpenGL? SDL?)
 - UTF-8 encoded strings
 
 Quotes from the creator (me):
 > sex<br/>
 > doit<br/>
-> "Quandale Dingle is my lord an saviour. He allowed me to see all the things you are not allowed to see. I also found my father, and gained 1 000 000 000 dollars"<br/>
-> sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus sus 
+> Quanlingling Dingle, Quandale Dingle, Dale Dingle, Quan Dingle, An Dingle
 
 ## References
 
@@ -111,10 +110,16 @@ In order to run, you must have Python 3.10 or higher installed on your path
 ### Compile a file
 
 ```command
-$TimidTheThird~ python3 /Python/Timid.py path_to_file.timid
+$TimidTheThird~ python3 /Python/Timid.py -c path_to_file.timid
 ```
 
 It will store the ```.timb``` file in the same directory as the ```.timid``` file
+
+### Compile and run a file
+
+```command
+$TimidTheThird~ python3 /Python/Timid.py path_to_file.timid
+```
 
 ### Make VM
 
@@ -127,7 +132,7 @@ make
 ### Execute a file on the C VM
 
 ```command
-$TimidTheThird~ .\Timid path_to_file.timb
+$TimidTheThird~ .\TimidRuntime path_to_file.timb
 ```
 
 #### Example
@@ -135,13 +140,13 @@ $TimidTheThird~ .\Timid path_to_file.timb
 Compile the ```goto.timid``` file:
 
 ```command
-$TimidTheThird~ python3 Python\Timid.py Tests\goto.timid
+$TimidTheThird~ python3 Python\Timid.py -c Tests\goto.timid
 ```
 
 Running it:
 
 ```command
-$TimidTheThird~ .\Timid Tests\goto.timb
+$TimidTheThird~ .\TimidRuntime Tests\goto.timb
 ```
 
 ## Development

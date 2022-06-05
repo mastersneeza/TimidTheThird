@@ -1,5 +1,7 @@
 program         ->      declaration*    ;
 
+--- Statements ---
+
 declaration     ->      '$' IDENTIFIER ( '=' expr )?
                     |   statement   ;
 
@@ -13,6 +15,8 @@ statement       ->      '|-' expr expr?
                     |   'if' expr statement ( 'else' statement )?
                     |   'print' expr?
                     |   'while' expr statement  ;
+
+--- Expressions ---
 
 expr            ->  assignment  ;
 
